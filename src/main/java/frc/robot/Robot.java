@@ -8,10 +8,9 @@ import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.XboxController;
-
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
@@ -22,22 +21,35 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
  * project.
  */
 public class Robot extends TimedRobot {
+
+  // CAN ID Values for devices attached to CAN bus
   private static final int leftFrontDeviceID = 10; 
   private static final int leftBackDeviceID = 11; 
   private static final int rightFrontDeviceID = 12; 
   private static final int rightBackDeviceID = 13; 
-  private MecanumDrive mecanumDrive;
+
+  // Define Controller Objects, we'll be associating these with controllers later
   private XboxController xboxMovementController;
   private XboxController xboxInteractionController;
+
+  // Create Objects related to drive train
+  private MecanumDrive mecanumDrive;
   private ADXRS450_Gyro gyro = new ADXRS450_Gyro();
   private CANSparkMax frontLeftMotor, rearLeftMotor, frontRightMotor, rearRightMotor;
+
+  // Create Objects and Variables related to UI choices 
   private SendableChooser<Boolean> controlModeChooser = new SendableChooser<>();
   private SendableChooser<Boolean> controllerModeChooser = new SendableChooser<>();
+
+  // These boolean variables are used to determine control options
   private boolean fieldCentricControl;
-  private boolean twoControllerMode; // Creates the twoControllerMode boolian variable that is used later to adjust the control method
-  SlewRateLimiter filterX = new SlewRateLimiter(0.5); // Creates a SlewRateLimiter that limits the rate of change of the signal to 0.5 units per second
-  SlewRateLimiter filterY = new SlewRateLimiter(0.5); // Creates a SlewRateLimiter that limits the rate of change of the signal to 0.5 units per second
-  SlewRateLimiter filterZ = new SlewRateLimiter(0.5); // Creates a SlewRateLimiter that limits the rate of change of the signal to 0.5 units per second
+  private boolean twoControllerMode;
+
+  // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
+  SlewRateLimiter filterX = new SlewRateLimiter(1); 
+  SlewRateLimiter filterY = new SlewRateLimiter(1);
+  SlewRateLimiter filterZ = new SlewRateLimiter(1);
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
@@ -122,28 +134,34 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
+
+    // Define Controller Inputs
+
     // TODO: Add a way for driver to switch between field oriented or robot oriented controls
 
     // TODO: Add a way for driver to calibrate (reset) the Gyroscope
 
     // TODO: Add a way to adjust top speed with driver's controller "bumpers"
 
-    // Controller Inputs
     double yAxisValue = -xboxMovementController.getLeftY(); // Remember, Y stick value is reversed
     double xAxisValue = xboxMovementController.getLeftX() * 1.1; // Counteract imperfect strafing
     double zAxisValue; // Declare z outside the conditional statement
+
     if (twoControllerMode == true) // zAxis changes based on if we have two controllers (operators) or not
       {zAxisValue = xboxInteractionController.getLeftX();
     } else {
       zAxisValue = xboxMovementController.getRightX();
     }
 
-    if (fieldCentricControl == false){ // We only specify gyro rotation if we've opted to use field centric controls
+    // Sending Values to Drive System
+    // We only want to specify gyro rotation if we've opted to use field centric controls
+
+    if (fieldCentricControl == false){ 
 
       mecanumDrive.driveCartesian(filterX.calculate(xAxisValue), filterY.calculate(yAxisValue), filterZ.calculate(zAxisValue));
 
     } else if (fieldCentricControl == true){
-      
+
       mecanumDrive.driveCartesian(filterX.calculate(xAxisValue), filterY.calculate(yAxisValue), filterZ.calculate(zAxisValue), gyro.getRotation2d());
 
     }
