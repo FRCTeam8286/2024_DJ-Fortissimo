@@ -31,7 +31,9 @@
       "/FMSInfo": "FMSInfo",
       "/SmartDashboard/Auto choices": "String Chooser",
       "/SmartDashboard/Control Mode": "String Chooser",
-      "/SmartDashboard/Controller Mode": "String Chooser"
+      "/SmartDashboard/Control Mode Chooser": "String Chooser",
+      "/SmartDashboard/Controller Mode": "String Chooser",
+      "/SmartDashboard/Controller Mode Chooser": "String Chooser"
     }
   },
   "NetworkTables Info": {

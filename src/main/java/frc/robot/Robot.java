@@ -57,6 +57,16 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     // Define the motors
+
+    /**
+     * CAN Bus Mapping:
+     * - Motor Controllers:
+     *   - Front Left Motor: CAN ID 10
+     *   - Rear Left Motor: CAN ID 11
+     *   - Front Right Motor: CAN ID 12
+     *   - Rear Right Motor: CAN ID 13
+     */
+
     frontLeftMotor = new CANSparkMax(leftFrontDeviceID, MotorType.kBrushless);
     rearLeftMotor = new CANSparkMax(leftBackDeviceID, MotorType.kBrushless);
     frontRightMotor = new CANSparkMax(rightFrontDeviceID, MotorType.kBrushless);
@@ -80,10 +90,13 @@ public class Robot extends TimedRobot {
     // Add options to the controllerModeChooser
     controllerModeChooser.addOption("One Controller Mode", false);
     controllerModeChooser.addOption("Two Controller Mode", true);
-    
+
     // Put the chooser on the SmartDashboard
-    SmartDashboard.putData("Control Mode", controlModeChooser);
-    SmartDashboard.putData("Controller Mode", controllerModeChooser);
+    SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
+    SmartDashboard.putData("Controller Mode Chooser", controllerModeChooser);
+
+    // Calibrate Gyro on teleopInit
+    gyro.calibrate();
 
   }
 
@@ -124,11 +137,13 @@ public class Robot extends TimedRobot {
 
     } else {
 
-      // Handle the case where one or both values are null (simulation mode)
+      // Handle the case where one or both values are null (simulation mode). Also log message because that is probably interesting to see
+      System.err.println("Error: Unable to retrieve control mode or controller mode from choosers. Using default values.");
       fieldCentricControl = false;
       twoControllerMode = false;
       
     }
+
   }
 
   /** This function is called periodically during operator control. */
@@ -137,9 +152,21 @@ public class Robot extends TimedRobot {
 
     // Define Controller Inputs
 
-    // TODO: Add a way for driver to switch between field oriented or robot oriented controls
+    /**
+     * Button Mapping:
+     * - XboxMovementController (Port 0):
+     *   - Left Y Axis: Drive forward/reverse
+     *   - Left X Axis: Strafe left/right
+     *   - Right X Axis: Rotate (when in one-controller mode)
+     *   - Start Button: Calibrate Gyro
+     *   - Right Bumper: Increase top speed
+     *   - Left Bumper: Decrease top speed
+     *
+     * - XboxInteractionController (Port 1):
+     *   - Left X Axis: Rotate (when in two-controller mode)
+     */
 
-    // TODO: Add a way for driver to calibrate (reset) the Gyroscope
+    // TODO: Add a way for driver to switch between field oriented or robot oriented controls
 
     // TODO: Add a way to adjust top speed with driver's controller "bumpers"
 
@@ -152,6 +179,14 @@ public class Robot extends TimedRobot {
     } else {
       zAxisValue = xboxMovementController.getRightX();
     }
+    
+    // Check if the "Start" button is pressed on the movement controller
+    if (xboxMovementController.getStartButtonPressed()) {
+      // Reset the gyro when the "Start" button is pressed
+      gyro.calibrate();
+      System.out.println("Calibrating Gyro");
+    }
+
 
     // Sending Values to Drive System
     // We only want to specify gyro rotation if we've opted to use field centric controls
