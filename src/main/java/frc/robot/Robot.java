@@ -31,26 +31,33 @@ public class Robot extends TimedRobot {
   private XboxController xboxInteractionController;
   private ADXRS450_Gyro gyro = new ADXRS450_Gyro();
   private CANSparkMax frontLeftMotor, rearLeftMotor, frontRightMotor, rearRightMotor;
-  private double frontLeftPower = 0;
-  private double backLeftPower = 0;
-  private double frontRightPower = 0;
-  private double backRightPower = 0;
   private SendableChooser<Boolean> controlModeChooser = new SendableChooser<>();
   private SendableChooser<Boolean> controllerModeChooser = new SendableChooser<>();
-  private boolean fieldCentricControl; 
-  private boolean twoControllerMode;
+  private boolean fieldCentricControl;
+  private boolean twoControllerMode; // Creates the twoControllerMode boolian variable that is used later to adjust the control method
+  SlewRateLimiter filterX = new SlewRateLimiter(0.5); // Creates a SlewRateLimiter that limits the rate of change of the signal to 0.5 units per second
+  SlewRateLimiter filterY = new SlewRateLimiter(0.5); // Creates a SlewRateLimiter that limits the rate of change of the signal to 0.5 units per second
+  SlewRateLimiter filterZ = new SlewRateLimiter(0.5); // Creates a SlewRateLimiter that limits the rate of change of the signal to 0.5 units per second
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
   public void robotInit() {
+    // Define the motors
     frontLeftMotor = new CANSparkMax(leftFrontDeviceID, MotorType.kBrushless);
     rearLeftMotor = new CANSparkMax(leftBackDeviceID, MotorType.kBrushless);
     frontRightMotor = new CANSparkMax(rightFrontDeviceID, MotorType.kBrushless);
     rearRightMotor = new CANSparkMax(rightBackDeviceID, MotorType.kBrushless);
+
+    // Invert the right motors
+    frontRightMotor.setInverted(true);
+    rearRightMotor.setInverted(true);
+
+    // Create a new mecanumDrive Object and associate the motors with it  
     mecanumDrive = new MecanumDrive(frontLeftMotor, rearLeftMotor, frontRightMotor, rearRightMotor);
 
+    // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
     xboxInteractionController = new XboxController(1);  // Replace 1 with the port number of your interaction Xbox controller
 
@@ -96,12 +103,16 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopInit() {
 
+    // If statement to see if our Mode Choser outputs worked, and if not, have some fall back values (Mostly for Simulation Mode)
     if (controlModeChooser.getSelected() != null && controllerModeChooser.getSelected() != null) {
+      
+      // Set variables fieldCentricControl and twoControllerMode to options selected on interactive chooser by the operators
       fieldCentricControl = controlModeChooser.getSelected();
       twoControllerMode = controllerModeChooser.getSelected();
+
     } else {
-      // Handle the case where one or both values are null
-      // You might want to set default values or handle it in a way that makes sense for your application.
+
+      // Handle the case where one or both values are null (simulation mode)
       fieldCentricControl = false;
       twoControllerMode = false;
       
@@ -111,57 +122,33 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-    
+    // TODO: Add a way for driver to switch between field oriented or robot oriented controls
+
+    // TODO: Add a way for driver to calibrate (reset) the Gyroscope
+
+    // TODO: Add a way to adjust top speed with driver's controller "bumpers"
+
     // Controller Inputs
     double yAxisValue = -xboxMovementController.getLeftY(); // Remember, Y stick value is reversed
     double xAxisValue = xboxMovementController.getLeftX() * 1.1; // Counteract imperfect strafing
     double zAxisValue; // Declare z outside the conditional statement
-    if (twoControllerMode == true)
+    if (twoControllerMode == true) // zAxis changes based on if we have two controllers (operators) or not
       {zAxisValue = xboxInteractionController.getLeftX();
     } else {
       zAxisValue = xboxMovementController.getRightX();
     }
-    
-    
 
-    
-    // Read our Trottle, but it's going to be a range of numbers between -1 and 1. We want this to be a range between 0 and 1 so we add 1 and half it
-    //double throttleMultiple = (0.5 * (-Joystick.getThrottle() + 1)) * 0.7; // DEPRICATED WITH XBOX CONTROLLERS
-    
-    // TODO: push button thorttle adjustment
+    if (fieldCentricControl == false){ // We only specify gyro rotation if we've opted to use field centric controls
 
-    // Hard coded throttle for now 
-    double throttleMultiple = 0.4;
-
-    // if field centric control is off, this is easy and we just take our values and apply them. 
-    // Otherwise we have to morph them to consider the robot's direction on the field
-
-    if (fieldCentricControl == false){
-
-      mecanumDrive.driveCartesian(xAxisValue, yAxisValue, zAxisValue);
+      mecanumDrive.driveCartesian(filterX.calculate(xAxisValue), filterY.calculate(yAxisValue), filterZ.calculate(zAxisValue));
 
     } else if (fieldCentricControl == true){
-
-      // Z doesn't Change?!?
-
-      // double gyroAngle = gyro.getAngle(); // Grab our current Angle from the Gyro
-      mecanumDrive.driveCartesian(xAxisValue, yAxisValue, zAxisValue, gyro.getRotation2d());
+      
+      mecanumDrive.driveCartesian(filterX.calculate(xAxisValue), filterY.calculate(yAxisValue), filterZ.calculate(zAxisValue), gyro.getRotation2d());
 
     }
 
-    // Creates a SlewRateLimiter that limits the rate of change of the signal to 0.5 units per second
-    SlewRateLimiter frontLeftFilter = new SlewRateLimiter(0.5);
-    SlewRateLimiter frontRightFilter = new SlewRateLimiter(0.5);
-    SlewRateLimiter backLeftFilter = new SlewRateLimiter(0.5);
-    SlewRateLimiter backRightFilter = new SlewRateLimiter(0.5);
-    // Apply Speeds to the left motors
     
-    frontLeftMotor.set(frontLeftFilter.calculate(frontLeftPower) * throttleMultiple);
-    rearLeftMotor.set(backLeftFilter.calculate(backLeftPower) * throttleMultiple);
-
-    // The right side rotates counter due to the physical motor's orientation
-    frontRightMotor.set(frontRightFilter.calculate(-frontRightPower) * throttleMultiple);
-    rearRightMotor.set(backRightFilter.calculate(-backRightPower) * throttleMultiple);
   }
 
   /** This function is called once when the robot is disabled. */
