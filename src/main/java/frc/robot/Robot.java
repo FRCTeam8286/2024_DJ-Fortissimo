@@ -5,6 +5,7 @@
 package frc.robot;
 
 import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -25,15 +26,11 @@ public class Robot extends TimedRobot {
   private static final int leftBackDeviceID = 11; 
   private static final int rightFrontDeviceID = 12; 
   private static final int rightBackDeviceID = 13; 
+  private MecanumDrive mecanumDrive;
   private XboxController xboxMovementController;
   private XboxController xboxInteractionController;
   private ADXRS450_Gyro gyro = new ADXRS450_Gyro();
-  private CANSparkMax m_leftFrontMotor;
-  private CANSparkMax m_leftBackMotor;
-  private CANSparkMax m_rightFrontMotor;
-  private CANSparkMax m_rightBackMotor;
-
-  private double denominator = 0;
+  private CANSparkMax frontLeftMotor, rearLeftMotor, frontRightMotor, rearRightMotor;
   private double frontLeftPower = 0;
   private double backLeftPower = 0;
   private double frontRightPower = 0;
@@ -42,20 +39,17 @@ public class Robot extends TimedRobot {
   private SendableChooser<Boolean> controllerModeChooser = new SendableChooser<>();
   private boolean fieldCentricControl; 
   private boolean twoControllerMode;
-
-  // Declare a boolean flag for debugging
-  private static final boolean DEBUG_ENABLED = true; // Set to true to enable debugging, false to disable
-
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
   public void robotInit() {
-    m_leftFrontMotor = new CANSparkMax(leftFrontDeviceID, MotorType.kBrushless);
-    m_leftBackMotor = new CANSparkMax(leftBackDeviceID, MotorType.kBrushless);
-    m_rightFrontMotor = new CANSparkMax(rightFrontDeviceID, MotorType.kBrushless);
-    m_rightBackMotor = new CANSparkMax(rightBackDeviceID, MotorType.kBrushless);
+    frontLeftMotor = new CANSparkMax(leftFrontDeviceID, MotorType.kBrushless);
+    rearLeftMotor = new CANSparkMax(leftBackDeviceID, MotorType.kBrushless);
+    frontRightMotor = new CANSparkMax(rightFrontDeviceID, MotorType.kBrushless);
+    rearRightMotor = new CANSparkMax(rightBackDeviceID, MotorType.kBrushless);
+    mecanumDrive = new MecanumDrive(frontLeftMotor, rearLeftMotor, frontRightMotor, rearRightMotor);
 
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
     xboxInteractionController = new XboxController(1);  // Replace 1 with the port number of your interaction Xbox controller
@@ -110,6 +104,7 @@ public class Robot extends TimedRobot {
       // You might want to set default values or handle it in a way that makes sense for your application.
       fieldCentricControl = false;
       twoControllerMode = false;
+      
     }
   }
 
@@ -117,14 +112,15 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     
-    
     // Controller Inputs
-    double y = -xboxMovementController.getLeftY(); // Remember, Y stick value is reversed
-    double x = xboxMovementController.getLeftX() * 1.1; // Counteract imperfect strafing
-    double z; // Declare z outside the conditional statement
-
-    if (twoControllerMode == true){z = xboxInteractionController.getLeftX();
-    } else {z = xboxMovementController.getRightX();}
+    double yAxisValue = -xboxMovementController.getLeftY(); // Remember, Y stick value is reversed
+    double xAxisValue = xboxMovementController.getLeftX() * 1.1; // Counteract imperfect strafing
+    double zAxisValue; // Declare z outside the conditional statement
+    if (twoControllerMode == true)
+      {zAxisValue = xboxInteractionController.getLeftX();
+    } else {
+      zAxisValue = xboxMovementController.getRightX();
+    }
     
     
 
@@ -142,35 +138,14 @@ public class Robot extends TimedRobot {
 
     if (fieldCentricControl == false){
 
-      // Denominator is the largest motor power (absolute value) or 1
-      // This ensures all the powers maintain the same ratio,
-      // but only if at least one is out of the range [-1, 1]
-      denominator = Math.max(Math.abs(y) + Math.abs(x) + Math.abs(z), 1);
-      frontLeftPower = (y + x + z) / denominator;
-      backLeftPower = (y - x + z) / denominator;
-      frontRightPower = (y - x - z) / denominator;
-      backRightPower = (y + x - z) / denominator;
+      mecanumDrive.driveCartesian(xAxisValue, yAxisValue, zAxisValue);
 
     } else if (fieldCentricControl == true){
 
       // Z doesn't Change?!?
 
-      double gyroAngle = gyro.getAngle(); // Grab our current Angle from the Gyro
-      double joystickAngle = Math.toDegrees(Math.atan2(y, x)); // Convert joystick polar coordinates to degrees
-      double relativeAngle = joystickAngle - gyroAngle; // The relativeAngle is the different between the Joystick's angle and the robot's actual angle (gyro angle).
-    
-      // Transform joystick inputs to field-centric coordinates
-      double fieldCentricX = Math.cos(Math.toRadians(relativeAngle)) * Math.sqrt(x * x + y * y);
-      double fieldCentricY = Math.sin(Math.toRadians(relativeAngle)) * Math.sqrt(x * x + y * y);
-
-      // Denominator is the largest motor power (absolute value) or 1
-      // This ensures all the powers maintain the same ratio,
-      // but only if at least one is out of the range [-1, 1]
-      denominator = Math.max(Math.abs(fieldCentricY) + Math.abs(fieldCentricX) + Math.abs(z), 1);
-      frontLeftPower = (fieldCentricY + fieldCentricX + z) / denominator;
-      backLeftPower = (fieldCentricY - fieldCentricX + z) / denominator;
-      frontRightPower = (fieldCentricY - fieldCentricX - z) / denominator;
-      backRightPower = (fieldCentricY + fieldCentricX - z) / denominator;
+      // double gyroAngle = gyro.getAngle(); // Grab our current Angle from the Gyro
+      mecanumDrive.driveCartesian(xAxisValue, yAxisValue, zAxisValue, gyro.getRotation2d());
 
     }
 
@@ -181,31 +156,12 @@ public class Robot extends TimedRobot {
     SlewRateLimiter backRightFilter = new SlewRateLimiter(0.5);
     // Apply Speeds to the left motors
     
-    m_leftFrontMotor.set(frontLeftFilter.calculate(frontLeftPower) * throttleMultiple);
-    m_leftBackMotor.set(backLeftFilter.calculate(backLeftPower) * throttleMultiple);
+    frontLeftMotor.set(frontLeftFilter.calculate(frontLeftPower) * throttleMultiple);
+    rearLeftMotor.set(backLeftFilter.calculate(backLeftPower) * throttleMultiple);
 
     // The right side rotates counter due to the physical motor's orientation
-    m_rightFrontMotor.set(frontRightFilter.calculate(-frontRightPower) * throttleMultiple);
-    m_rightBackMotor.set(backRightFilter.calculate(-backRightPower) * throttleMultiple);
-
-    // Conditionally print motor speeds to the console for debugging
-    if (DEBUG_ENABLED) {
-    // Format speeds without scientific notation and truncate to 2 decimal places
-    String formattedFrontLeftSpeed = String.format("%.2f", frontLeftPower * throttleMultiple);
-    String formattedBackLeftSpeed = String.format("%.2f", backLeftPower * throttleMultiple);
-    String formattedFrontRightSpeed = String.format("%.2f", -frontRightPower * throttleMultiple);
-    String formattedBackRightSpeed = String.format("%.2f", -backRightPower * throttleMultiple);
-    String formattedX = String.format("%.2f", x);
-    String formattedY = String.format("%.2f", y);
-    String formattedZ = String.format("%.2f", z);
-
-    System.out.println("Front Left Motor Speed: " + formattedFrontLeftSpeed);
-    System.out.println("Back Left Motor Speed: " + formattedBackLeftSpeed);
-    System.out.println("Front Right Motor Speed: " + formattedFrontRightSpeed);
-    System.out.println("Back Right Motor Speed: " + formattedBackRightSpeed);
-    System.out.println("x,y,z: " + formattedX + "," + formattedY + "," + formattedZ);
-    System.out.println("raw unfiltered x,y,z: " + xboxMovementController.getLeftX() + "," + xboxMovementController.getLeftY() + "," + xboxMovementController.getRightX());
-    }
+    frontRightMotor.set(frontRightFilter.calculate(-frontRightPower) * throttleMultiple);
+    rearRightMotor.set(backRightFilter.calculate(-backRightPower) * throttleMultiple);
   }
 
   /** This function is called once when the robot is disabled. */
