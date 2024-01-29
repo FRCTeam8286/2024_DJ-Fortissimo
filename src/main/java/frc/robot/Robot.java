@@ -22,7 +22,7 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
  */
 public class Robot extends TimedRobot {
 
-  // CAN ID Values for devices attached to CAN bus
+  // CAN ID values for devices attached to CAN bus
   private static final int leftFrontDeviceID = 10; 
   private static final int leftBackDeviceID = 11; 
   private static final int rightFrontDeviceID = 12; 
@@ -32,12 +32,12 @@ public class Robot extends TimedRobot {
   private XboxController xboxMovementController;
   private XboxController xboxInteractionController;
 
-  // Create Objects related to drive train
+  // Create objects related to drive train
   private MecanumDrive mecanumDrive;
   private ADXRS450_Gyro gyro = new ADXRS450_Gyro();
   private CANSparkMax frontLeftMotor, rearLeftMotor, frontRightMotor, rearRightMotor;
 
-  // Create Objects and Variables related to UI choices 
+  // Create objects and variables related to UI choices 
   private SendableChooser<Boolean> controlModeChooser = new SendableChooser<>();
   private SendableChooser<Boolean> controllerModeChooser = new SendableChooser<>();
 
