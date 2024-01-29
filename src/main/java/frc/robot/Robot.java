@@ -73,9 +73,12 @@ public class Robot extends TimedRobot {
     rearRightMotor = new CANSparkMax(rightBackDeviceID, MotorType.kBrushless);
 
     // Invert the right motors
+    
+    frontLeftMotor.setInverted(false);
+    rearLeftMotor.setInverted(false);
     frontRightMotor.setInverted(true);
     rearRightMotor.setInverted(true);
-
+    
     // Create a new mecanumDrive Object and associate the motors with it  
     mecanumDrive = new MecanumDrive(frontLeftMotor, rearLeftMotor, frontRightMotor, rearRightMotor);
 
