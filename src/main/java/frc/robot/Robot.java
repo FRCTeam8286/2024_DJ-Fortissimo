@@ -75,8 +75,8 @@ public class Robot extends TimedRobot {
     // Invert the right motors
     
     frontLeftMotor.setInverted(false);
-    rearLeftMotor.setInverted(false);
-    frontRightMotor.setInverted(true);
+    rearLeftMotor.setInverted(true);
+    frontRightMotor.setInverted(false);
     rearRightMotor.setInverted(true);
     
     // Create a new mecanumDrive Object and associate the motors with it  
@@ -177,11 +177,18 @@ public class Robot extends TimedRobot {
     double xAxisValue = xboxMovementController.getLeftX() * 1.1; // Counteract imperfect strafing
     double zAxisValue; // Declare z outside the conditional statement
 
+    
     if (twoControllerMode == true) // zAxis changes based on if we have two controllers (operators) or not
       {zAxisValue = xboxInteractionController.getLeftX();
     } else {
       zAxisValue = xboxMovementController.getRightX();
     }
+
+    // Set Deadzones
+    if (Math.abs(yAxisValue < 0.2)) {yAxisValue = 0;}
+    if (Math.abs(xAxisValue < 0.2)) {xAxisValue = 0;}
+    if (Math.abs(zAxisValue < 0.2)) {zAxisValue = 0;}
+
     
     // Check if the "Start" button is pressed on the movement controller
     if (xboxMovementController.getStartButtonPressed()) {
