@@ -90,7 +90,7 @@ public class Robot extends TimedRobot {
   private static final double ledGreen = 0.77;
   private static final double ledBlue = 0.87;
   private static final double ledBlack = 0.99;
-  private static final double ledPattern = 0.37;
+  private static final double ledPattern = 0.51;
   
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -111,13 +111,12 @@ public class Robot extends TimedRobot {
     // Invert the right motors
     
     leftFrontMotor.setInverted(false);
-    leftBackMotor.setInverted(true);
-    rightFrontMotor.setInverted(false);
+    leftBackMotor.setInverted(false);
+    rightFrontMotor.setInverted(true);
     rightBackMotor.setInverted(true);
     
     // Create a new mecanumDrive Object and associate the motors with it  
     mecanumDrive = new MecanumDrive(leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor);
-
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
     xboxInteractionController = new XboxController(1);  // Replace 1 with the port number of your interaction Xbox controller
@@ -252,7 +251,6 @@ public class Robot extends TimedRobot {
       mecanumDrive.driveCartesian(filterX.calculate(xAxisValue), filterY.calculate(yAxisValue), filterZ.calculate(zAxisValue), gyro.getRotation2d());
 
     }
-
     
   }
 
