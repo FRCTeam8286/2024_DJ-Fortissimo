@@ -37,6 +37,12 @@ public class Robot extends TimedRobot {
   private static final int leftBackDeviceID = 11; 
   private static final int rightFrontDeviceID = 12; 
   private static final int rightBackDeviceID = 13; 
+  
+  // Assuming Blinkin LED controller is connected to PWM port 0
+  private static final int blinkinPWMChannel = 0;
+  
+  // Create PWMSparkMax for controlling Blinkin LED
+  private PWMSparkMax blinkinLED = new PWMSparkMax(blinkinPWMChannel);
 
   // Define Controller Objects, we'll be associating these with controllers later
   private XboxController xboxMovementController;
@@ -69,6 +75,17 @@ public class Robot extends TimedRobot {
   private static final double yDeadZone = 0.2;
   private static final double xDeadZone = 0.2;
   private static final double zDeadZone = 0.2;
+  
+  // Setup some standard LED colors to use with the Blinkin
+  private static final double ledRed = 0.61;
+  private static final double ledOrange = 0.65;
+  private static final double ledYellow = 0.69;
+  private static final double ledGreen = 0.77;
+  private static final double ledBlue = 0.87;
+  private static final double ledViolet = 0.91;
+  private static final double ledWhite = 0.93;
+  private static final double ledBlack = 0.99;
+  
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -142,6 +159,8 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopInit() {
 
+	// Set LEDs to Blue so operator can tell the robot is busy initializing
+	blinkinLED.set(ledBlue);
     // If statement to see if our Mode Choser outputs worked, and if not, have some fall back values (Mostly for Simulation Mode)
     if (controlModeChooser.getSelected() != null && controllerModeChooser.getSelected() != null) {
       
@@ -163,8 +182,10 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-
-    // Define Controller Inputs
+	// Set LEDs to Green so operator can tell the robot is in Teleop mode
+	blinkinLED.set(ledGreen);
+    
+	// Define Controller Inputs
 
     /**
      * Button Mapping:
@@ -203,6 +224,8 @@ public class Robot extends TimedRobot {
     
     // Check if the "Start" button is pressed on the movement controller
     if (xboxMovementController.getStartButtonPressed()) {
+		// Set LEDs to Blue so operator can tell the robot is busy calibrating
+		blinkinLED.set(ledBlue);
       // Reset the gyro when the "Start" button is pressed
       gyro.calibrate();
       System.out.println("Calibrating Gyro");
@@ -227,7 +250,10 @@ public class Robot extends TimedRobot {
 
   /** This function is called once when the robot is disabled. */
   @Override
-  public void disabledInit() {}
+  public void disabledInit() {	
+	// Set LEDs to Red so operator can tell the robot is stopped
+	blinkinLED.set(ledRed);
+  }
 
   /** This function is called periodically when disabled. */
   @Override
