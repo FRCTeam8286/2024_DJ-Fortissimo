@@ -11,7 +11,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.wpilibj.PWMSparkMax;
+import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 import edu.wpi.first.wpilibj.Timer;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
@@ -225,9 +225,9 @@ public class Robot extends TimedRobot {
     }
 
     // Apply Deadzones
-    if (Math.abs(yAxisValue < yDeadZone)) {yAxisValue = 0;}
-    if (Math.abs(xAxisValue < xDeadZone)) {xAxisValue = 0;}
-    if (Math.abs(zAxisValue < zDeadZone)) {zAxisValue = 0;}
+    if (Math.abs(yAxisValue) < yDeadZone) {yAxisValue = 0;}
+    if (Math.abs(xAxisValue) < xDeadZone) {xAxisValue = 0;}
+    if (Math.abs(zAxisValue) < zDeadZone) {zAxisValue = 0;}
 
     
     // Check if the "Start" button is pressed on the movement controller
