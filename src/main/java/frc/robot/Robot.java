@@ -11,6 +11,8 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.wpilibj.PWMSparkMax;
+import edu.wpi.first.wpilibj.Timer;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 
@@ -23,6 +25,14 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
 public class Robot extends TimedRobot {
 
   // CAN ID values for devices attached to CAN bus
+  /**
+  * CAN Bus Mapping:
+  * - Motor Controllers:
+  *   - Front Left Motor: CAN ID 10
+  *   - Rear Left Motor: CAN ID 11
+  *   - Front Right Motor: CAN ID 12
+  *   - Rear Right Motor: CAN ID 13
+  */
   private static final int leftFrontDeviceID = 10; 
   private static final int leftBackDeviceID = 11; 
   private static final int rightFrontDeviceID = 12; 
@@ -49,6 +59,16 @@ public class Robot extends TimedRobot {
   SlewRateLimiter filterX = new SlewRateLimiter(1); 
   SlewRateLimiter filterY = new SlewRateLimiter(1);
   SlewRateLimiter filterZ = new SlewRateLimiter(1);
+  
+  // Movment Modifiers (so the robot doesn't go so fast)
+  private static final double yModifier = 0.7;
+  private static final double xModifier = 0.7;
+  private static final double zModifier = 0.5;
+  
+  // Controller Dead-zone Values (to help eleminate drift)
+  private static final double yDeadZone = 0.2;
+  private static final double xDeadZone = 0.2;
+  private static final double zDeadZone = 0.2;
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -57,15 +77,6 @@ public class Robot extends TimedRobot {
   @Override
   public void robotInit() {
     // Define the motors
-
-    /**
-     * CAN Bus Mapping:
-     * - Motor Controllers:
-     *   - Front Left Motor: CAN ID 10
-     *   - Rear Left Motor: CAN ID 11
-     *   - Front Right Motor: CAN ID 12
-     *   - Rear Right Motor: CAN ID 13
-     */
 
     frontLeftMotor = new CANSparkMax(leftFrontDeviceID, MotorType.kBrushless);
     rearLeftMotor = new CANSparkMax(leftBackDeviceID, MotorType.kBrushless);
@@ -173,21 +184,21 @@ public class Robot extends TimedRobot {
 
     // TODO: Add a way to adjust top speed with driver's controller "bumpers"
 
-    double yAxisValue = -xboxMovementController.getLeftY(); // Remember, Y stick value is reversed
-    double xAxisValue = xboxMovementController.getLeftX() * 1.1; // Counteract imperfect strafing
+    double yAxisValue = -xboxMovementController.getLeftY() * yModifier; // Remember, Y stick value is reversed
+    double xAxisValue = xboxMovementController.getLeftX() * xModifier; // Counteract imperfect strafing
     double zAxisValue; // Declare z outside the conditional statement
 
     
     if (twoControllerMode == true) // zAxis changes based on if we have two controllers (operators) or not
-      {zAxisValue = xboxInteractionController.getLeftX();
+      {zAxisValue = xboxInteractionController.getLeftX() * zModifier;
     } else {
-      zAxisValue = xboxMovementController.getRightX();
+      zAxisValue = xboxMovementController.getRightX() * zModifier;
     }
 
-    // Set Deadzones
-    if (Math.abs(yAxisValue < 0.2)) {yAxisValue = 0;}
-    if (Math.abs(xAxisValue < 0.2)) {xAxisValue = 0;}
-    if (Math.abs(zAxisValue < 0.2)) {zAxisValue = 0;}
+    // Apply Deadzones
+    if (Math.abs(yAxisValue < yDeadZone)) {yAxisValue = 0;}
+    if (Math.abs(xAxisValue < xDeadZone)) {xAxisValue = 0;}
+    if (Math.abs(zAxisValue < zDeadZone)) {zAxisValue = 0;}
 
     
     // Check if the "Start" button is pressed on the movement controller
