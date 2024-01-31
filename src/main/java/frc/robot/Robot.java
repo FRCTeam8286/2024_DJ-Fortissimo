@@ -77,22 +77,30 @@ public class Robot extends TimedRobot {
   private static final double zDeadZone = 0.2;
   
   // Setup some standard LED colors to use with the Blinkin
+  /**
+  * - LED Color Map:
+  *
+  *  - ledRed: Indicates the robot is in Teleop mode but doesn't have the game piece loaded
+  *  - ledBlue: Indicates the robot is busy initializing or calibrating
+  *  - ledBlack: Indicates the robot is stopped or no specific condition
+  *  - ledGreen: Indicates the robot is in Teleop mode and has the game piece loaded
+  *  - ledPattern: Used when robot is first turned on to show Farwell School Colors
+  */
   private static final double ledRed = 0.61;
-  private static final double ledOrange = 0.65;
-  private static final double ledYellow = 0.69;
   private static final double ledGreen = 0.77;
   private static final double ledBlue = 0.87;
-  private static final double ledViolet = 0.91;
-  private static final double ledWhite = 0.93;
   private static final double ledBlack = 0.99;
+  private static final double ledPattern = 0.37;
   
-
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
    */
   @Override
   public void robotInit() {
+    // Have LEDs blink in farwell school colors pattern
+    blinkinLED.set(ledPattern);
+	  
     // Define the motors
 
     leftFrontMotor = new CANSparkMax(leftFrontDeviceID, MotorType.kBrushless);
@@ -182,8 +190,8 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-	// Set LEDs to Green so operator can tell the robot is in Teleop mode
-	blinkinLED.set(ledGreen);
+	// Set LEDs to Red so operator can tell the robot is in Teleop mode but no item is picked up
+	blinkinLED.set(ledRed);
     
 	// Define Controller Inputs
 
