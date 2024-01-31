@@ -29,9 +29,9 @@ public class Robot extends TimedRobot {
   * CAN Bus Mapping:
   * - Motor Controllers:
   *   - Front Left Motor: CAN ID 10
-  *   - Rear Left Motor: CAN ID 11
+  *   - Back Left Motor: CAN ID 11
   *   - Front Right Motor: CAN ID 12
-  *   - Rear Right Motor: CAN ID 13
+  *   - Back Right Motor: CAN ID 13
   */
   private static final int leftFrontDeviceID = 10; 
   private static final int leftBackDeviceID = 11; 
@@ -45,7 +45,7 @@ public class Robot extends TimedRobot {
   // Create objects related to drive train
   private MecanumDrive mecanumDrive;
   private ADXRS450_Gyro gyro = new ADXRS450_Gyro();
-  private CANSparkMax frontLeftMotor, rearLeftMotor, frontRightMotor, rearRightMotor;
+  private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;
 
   // Create objects and variables related to UI choices 
   private SendableChooser<Boolean> controlModeChooser = new SendableChooser<>();
@@ -78,20 +78,20 @@ public class Robot extends TimedRobot {
   public void robotInit() {
     // Define the motors
 
-    frontLeftMotor = new CANSparkMax(leftFrontDeviceID, MotorType.kBrushless);
-    rearLeftMotor = new CANSparkMax(leftBackDeviceID, MotorType.kBrushless);
-    frontRightMotor = new CANSparkMax(rightFrontDeviceID, MotorType.kBrushless);
-    rearRightMotor = new CANSparkMax(rightBackDeviceID, MotorType.kBrushless);
+    leftFrontMotor = new CANSparkMax(leftFrontDeviceID, MotorType.kBrushless);
+    leftBackMotor = new CANSparkMax(leftBackDeviceID, MotorType.kBrushless);
+    rightFrontMotor = new CANSparkMax(rightFrontDeviceID, MotorType.kBrushless);
+    rightBackMotor = new CANSparkMax(rightBackDeviceID, MotorType.kBrushless);
 
     // Invert the right motors
     
-    frontLeftMotor.setInverted(false);
-    rearLeftMotor.setInverted(true);
-    frontRightMotor.setInverted(false);
-    rearRightMotor.setInverted(true);
+    leftFrontMotor.setInverted(false);
+    leftBackMotor.setInverted(true);
+    rightFrontMotor.setInverted(false);
+    rightBackMotor.setInverted(true);
     
     // Create a new mecanumDrive Object and associate the motors with it  
-    mecanumDrive = new MecanumDrive(frontLeftMotor, rearLeftMotor, frontRightMotor, rearRightMotor);
+    mecanumDrive = new MecanumDrive(leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor);
 
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
