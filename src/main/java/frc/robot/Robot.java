@@ -227,7 +227,6 @@ public class Robot extends TimedRobot {
     if (Math.abs(yAxisValue) < yDeadZone) {yAxisValue = 0;}
     if (Math.abs(xAxisValue) < xDeadZone) {xAxisValue = 0;}
     if (Math.abs(zAxisValue) < zDeadZone) {zAxisValue = 0;}
-
     
     // Check if the "Start" button is pressed on the movement controller
     if (xboxMovementController.getStartButtonPressed()) {
@@ -237,7 +236,13 @@ public class Robot extends TimedRobot {
       gyro.calibrate();
       System.out.println("Calibrating Gyro");
     }
-
+    // Output X, Y, and Z values to Smart Dashboard for Troubleshooting
+    SmartDashboard.putNumber("Current X Value", currentXValue);
+    SmartDashboard.putNumber("Current Y Value", currentYValue);
+    SmartDashboard.putNumber("Current Z Value", currentZValue);
+    
+    // Output Gyro value to Smart Dashboard for troubleshooting
+    SmartDashboard.putNumber("Current Gyro Rotation", gyro.getRotation2d().getDegrees());
 
     // Sending Values to Drive System
     // We only want to specify gyro rotation if we've opted to use field centric controls
@@ -251,14 +256,19 @@ public class Robot extends TimedRobot {
       mecanumDrive.driveCartesian(filterY.calculate(yAxisValue), filterX.calculate(xAxisValue), filterZ.calculate(zAxisValue), gyro.getRotation2d());
 
     }
-    
+    // Output Motor Values to Smart Dashboard for troubleshooting
+    SmartDashboard.putNumber("Left Front Motor Power", leftFrontMotor.getAppliedOutput());
+    SmartDashboard.putNumber("Left Back Motor Power", leftBackMotor.getAppliedOutput());
+    SmartDashboard.putNumber("Right Front Motor Power", rightFrontMotor.getAppliedOutput());
+    SmartDashboard.putNumber("Right Back Motor Power", rightBackMotor.getAppliedOutput());
+
   }
 
   /** This function is called once when the robot is disabled. */
   @Override
   public void disabledInit() {	
 	// Set LEDs to Red so operator can tell the robot is stopped
-	blinkinLED.set(ledRed);
+	blinkinLED.set(ledBlack);
   }
 
   /** This function is called periodically when disabled. */
