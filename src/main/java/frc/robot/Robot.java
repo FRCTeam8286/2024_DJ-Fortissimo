@@ -244,11 +244,11 @@ public class Robot extends TimedRobot {
 
     if (fieldCentricControl == false){ 
 
-      mecanumDrive.driveCartesian(filterX.calculate(xAxisValue), filterY.calculate(yAxisValue), filterZ.calculate(zAxisValue));
+      mecanumDrive.driveCartesian(filterY.calculate(yAxisValue), filterX.calculate(xAxisValue), filterZ.calculate(zAxisValue));
 
     } else if (fieldCentricControl == true){
 
-      mecanumDrive.driveCartesian(filterX.calculate(xAxisValue), filterY.calculate(yAxisValue), filterZ.calculate(zAxisValue), gyro.getRotation2d());
+      mecanumDrive.driveCartesian(filterY.calculate(yAxisValue), filterX.calculate(xAxisValue), filterZ.calculate(zAxisValue), gyro.getRotation2d());
 
     }
     
