@@ -241,14 +241,14 @@ public class Robot extends TimedRobot {
     if (Math.abs(xAxisValue) < xDeadZone) {xAxisValue = 0;}
     if (Math.abs(zAxisValue) < zDeadZone) {zAxisValue = 0;}
     
-    // Check if the "Start" button is pressed on the movement controller
+    // Reset the gyro when the "Start" button is pressed, and set the LED to blue so the operators know it's busy
     if (xboxMovementController.getStartButtonPressed()) {
 
-      // Set LEDs to Blue so operator can tell the robot is busy calibrating
       blinkinLED.set(ledBlue);
-      // Reset the gyro when the "Start" button is pressed
-      gyro.calibrate();
+      
       System.out.println("Calibrating Gyro");
+      gyro.reset();
+      
 
     }
 
