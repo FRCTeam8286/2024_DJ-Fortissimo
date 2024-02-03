@@ -141,7 +141,8 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
     SmartDashboard.putData("Controller Mode Chooser", controllerModeChooser);
 
-    // Calibrate Gyro on teleopInit
+    // Calibrate and Reset Gyro
+    gyro.reset();
     gyro.calibrate();
 
   }
