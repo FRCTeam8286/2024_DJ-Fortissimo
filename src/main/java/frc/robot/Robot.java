@@ -214,14 +214,13 @@ public class Robot extends TimedRobot {
      *   - Left X Axis: Strafe left/right
      *   - Right X Axis: Rotate (when in one-controller mode)
      *   - Start Button: Calibrate Gyro
+     *   - Y Button: Toggle Field Centric
      *   - Right Bumper: Increase top speed
      *   - Left Bumper: Decrease top speed
      *
      * - XboxInteractionController (Port 1):
      *   - Left X Axis: Rotate (when in two-controller mode)
      */
-
-    // TODO: Add a way for driver to switch between field oriented or robot oriented controls
 
     // TODO: Add a way to adjust top speed with driver's controller "bumpers"
 
@@ -251,7 +250,12 @@ public class Robot extends TimedRobot {
       System.out.println("Calibrating Gyro");
 
     }
-    
+
+    // If Y is pressed, flip between field centric and robot centric controlls
+    if (xboxInteractionController.getYButtonPressed()) {
+      fieldCentricControl = !fieldCentricControl;
+    }
+
     // If debug mode is on, provide diagnostic information to the smart dashboard
     if (debug) {
 
