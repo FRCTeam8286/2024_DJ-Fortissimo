@@ -300,18 +300,18 @@ public class Robot extends TimedRobot {
     // We only want to specify gyro rotation if we've opted to use field centric controls
 
     if (fieldCentricControl){
-        mecanumDrive.driveCartesian(
-          filterY.calculate(yAxisValue), 
-          filterX.calculate(xAxisValue), 
-          filterZ.calculate(zAxisValue), 
-          gyro.getRotation2d()
-        );
+      mecanumDrive.driveCartesian(
+        filterY.calculate(yAxisValue), 
+        filterX.calculate(xAxisValue), 
+        filterZ.calculate(zAxisValue), 
+        gyro.getRotation2d()
+      );
     } else{
-        mecanumDrive.driveCartesian(
-          filterY.calculate(yAxisValue), 
-          filterX.calculate(xAxisValue), 
-          filterZ.calculate(zAxisValue)
-        );
+      mecanumDrive.driveCartesian(
+        filterY.calculate(yAxisValue), 
+        filterX.calculate(xAxisValue), 
+        filterZ.calculate(zAxisValue)
+      );
     }
 
     //if debug mode is on, provide diagnostic data to the smart dashboard
@@ -345,11 +345,144 @@ public class Robot extends TimedRobot {
   public void testInit() {
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (debug) { System.out.println("Entering testInit Phase");}
+    // Set LEDs to Blue so operator can tell the robot is busy initializing
+	  blinkinLED.set(ledBlue);
+    // If statement to see if our Mode Choser outputs worked, and if not, have some fall back values (Mostly for Simulation Mode)
+    if (controlModeChooser.getSelected() != null && controllerModeChooser.getSelected() != null) {
+      
+      // Set variables fieldCentricControl and twoControllerMode to options selected on interactive chooser by the operators
+      fieldCentricControl = controlModeChooser.getSelected();
+      twoControllerMode = controllerModeChooser.getSelected();
+
+    } else {
+
+      // Handle the case where one or both values are null (simulation mode). Also log message because that is probably interesting to see
+      System.err.println("Error: Unable to retrieve control mode or controller mode from choosers. Using default values.");
+      fieldCentricControl = false;
+      twoControllerMode = false;
+      
+    }
   }
 
   /** This function is called periodically during test mode. */
   @Override
-  public void testPeriodic() {}
+  public void testPeriodic() {	
+  // Set LEDs to Red so operator can tell the robot is in Teleop mode but no item is picked up
+	blinkinLED.set(ledRed);
+    
+	// Define Controller Inputs
+
+    /**
+     * Button Mapping:
+     * - XboxMovementController (Port 0):
+     *   - Left Y Axis: Drive forward/reverse
+     *   - Left X Axis: Strafe left/right
+     *   - Right X Axis: Rotate (when in one-controller mode)
+     *   - Start Button: Calibrate Gyro
+     *   - Y Button: Toggle Field Centric
+     *   - Right Bumper: Increase movement speed
+     *   - Left Bumper: Decrease movement speed
+     *
+     * - XboxInteractionController (Port 1):
+     *   - Left X Axis: Rotate (when in two-controller mode)
+     */
+    
+     // 
+     if (xboxMovementController.getRightBumperPressed()){
+
+        // Increase movement speed by 0.25 (up to a maximum of 1.0)
+        movementSpeed += 0.25;
+        movementSpeed = Math.min(movementSpeed, 1.0);
+
+    } else if (xboxMovementController.getLeftBumperPressed()) {
+
+        // Decrease movement speed by 0.25 (down to a minimum of 0.25)
+        movementSpeed -= 0.25;
+        movementSpeed = Math.max(movementSpeed, 0.25);
+
+    }
+
+    // Movement variables provided they are above deadzone threshold
+    double yAxisValue = 0;
+    double xAxisValue = 0;
+    double zAxisValue = 0;
+    if (Math.abs(xboxMovementController.getLeftY()) > yDeadZone) {
+      yAxisValue = -xboxMovementController.getLeftY() * movementSpeed * yModifier; // Remember, Y stick value is reversed
+    }
+
+    if (Math.abs(xboxMovementController.getLeftX()) > xDeadZone) {
+      xAxisValue = xboxMovementController.getLeftX() * movementSpeed * xModifier; 
+    }    
+
+    if (twoControllerMode == true && Math.abs(xboxInteractionController.getLeftX()) > zDeadZone) // zAxis changes based on if we have two controllers (operators) or not
+      {zAxisValue = xboxInteractionController.getLeftX() * zModifier;
+    } else if (Math.abs(xboxMovementController.getRightX()) > zDeadZone){
+      zAxisValue = xboxMovementController.getRightX() * zModifier;
+    } 
+    
+    // Reset the gyro when the "Start" button is pressed, and set the LED to blue so the operators know it's busy
+    if (xboxMovementController.getStartButtonPressed()) {
+      blinkinLED.set(ledBlue);
+      
+      if (debug) {
+        System.out.println("Calibrating Gyro");
+      }
+      gyro.reset();      
+    }
+
+    // If Y is pressed, flip between field centric and robot centric controlls
+    if (xboxInteractionController.getYButtonPressed()) {
+      if (debug) {
+        System.out.println("flipping between field centric and robot centric");
+      }
+      fieldCentricControl = !fieldCentricControl;
+    }
+
+    // If debug mode is on, provide diagnostic information to the smart dashboard
+    if (debug) {
+
+      // Output X, Y, and Z values to Smart Dashboard for Troubleshooting
+      SmartDashboard.putNumber("Current X Value", xAxisValue);
+      SmartDashboard.putNumber("Current Y Value", yAxisValue);
+      SmartDashboard.putNumber("Current Z Value", zAxisValue);
+
+      // Output Gyro value to Smart Dashboard for troubleshooting
+      SmartDashboard.putNumber("Current Gyro Rotation", gyro.getRotation2d().getDegrees());
+
+    }
+
+    // Sending Values to Drive System
+    // We only want to specify gyro rotation if we've opted to use field centric controls
+
+    if (fieldCentricControl){
+      double botHeading = Math.toRadians(gyro.getAngle());
+      double rotX = filterX.calculate(xAxisValue) * Math.cos(-botHeading) - filterY.calculate(yAxisValue) * Math.sin(-botHeading);
+      double rotY = filterX.calculate(xAxisValue) * Math.sin(-botHeading) + filterY.calculate(yAxisValue) * Math.cos(-botHeading);
+      double denominator = Math.max(Math.abs(filterY.calculate(yAxisValue)) + Math.abs(filterX.calculate(xAxisValue)) + Math.abs(filterZ.calculate(zAxisValue)), 1);
+      leftFrontMotor.set((rotY + rotX + filterZ.calculate(zAxisValue)) / denominator);
+      leftBackMotor.set((rotY - rotX + filterZ.calculate(zAxisValue)) / denominator);
+      rightFrontMotor.set((rotY - rotX - filterZ.calculate(zAxisValue)) / denominator);
+      rightBackMotor.set((rotY + rotX - filterZ.calculate(zAxisValue))  / denominator);
+    } else{
+      double denominator = Math.max(Math.abs(filterY.calculate(yAxisValue)) + Math.abs(filterX.calculate(xAxisValue)) + Math.abs(filterZ.calculate(zAxisValue)), 1);
+      leftFrontMotor.set((filterY.calculate(yAxisValue) + filterX.calculate(xAxisValue) + filterZ.calculate(zAxisValue)) / denominator);
+      leftBackMotor.set((filterY.calculate(yAxisValue) - filterX.calculate(xAxisValue) + filterZ.calculate(zAxisValue)) / denominator);
+      rightFrontMotor.set((filterY.calculate(yAxisValue) - filterX.calculate(xAxisValue) - filterZ.calculate(zAxisValue)) / denominator);
+      rightBackMotor.set((filterY.calculate(yAxisValue) + filterX.calculate(xAxisValue) - filterZ.calculate(zAxisValue))  / denominator);
+    }
+
+    //if debug mode is on, provide diagnostic data to the smart dashboard
+    if (debug) {
+
+      // Output Motor Values to Smart Dashboard for troubleshooting
+      SmartDashboard.putNumber("Left Front Motor Power", leftFrontMotor.getAppliedOutput());
+      SmartDashboard.putNumber("Left Back Motor Power", leftBackMotor.getAppliedOutput());
+      SmartDashboard.putNumber("Right Front Motor Power", rightFrontMotor.getAppliedOutput());
+      SmartDashboard.putNumber("Right Back Motor Power", rightBackMotor.getAppliedOutput());
+
+    }
+
+  }
 
   /** This function is called once when the robot is first started up. */
   @Override
