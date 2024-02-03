@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
+import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -54,7 +55,7 @@ public class Robot extends TimedRobot {
 
   // Create objects related to drive train
   private MecanumDrive mecanumDrive;
-  private ADXRS450_Gyro gyro = new ADXRS450_Gyro();
+  private ADXRS450_Gyro gyro = new ADXRS450_Gyro(SPI.Port.kOnboardCS0);
   private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;
 
   // Create objects and variables related to UI choices 
