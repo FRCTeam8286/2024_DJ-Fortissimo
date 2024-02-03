@@ -237,9 +237,9 @@ public class Robot extends TimedRobot {
       System.out.println("Calibrating Gyro");
     }
     // Output X, Y, and Z values to Smart Dashboard for Troubleshooting
-    SmartDashboard.putNumber("Current X Value", currentXValue);
-    SmartDashboard.putNumber("Current Y Value", currentYValue);
-    SmartDashboard.putNumber("Current Z Value", currentZValue);
+    SmartDashboard.putNumber("Current X Value", xAxisValue);
+    SmartDashboard.putNumber("Current Y Value", yAxisValue);
+    SmartDashboard.putNumber("Current Z Value", zAxisValue);
     
     // Output Gyro value to Smart Dashboard for troubleshooting
     SmartDashboard.putNumber("Current Gyro Rotation", gyro.getRotation2d().getDegrees());
