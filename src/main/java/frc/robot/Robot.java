@@ -12,9 +12,11 @@ import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
+import com.revrobotics.REVPhysicsSim;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -150,6 +152,8 @@ public class Robot extends TimedRobot {
     // Set Top speed to .5
     movementSpeed = .5;
 
+
+
   }
 
   /**
@@ -265,12 +269,17 @@ public class Robot extends TimedRobot {
     if (xboxMovementController.getStartButtonPressed()) {
       blinkinLED.set(ledBlue);
       
-      System.out.println("Calibrating Gyro");
+      if (debug) {
+        System.out.println("Calibrating Gyro");
+      }
       gyro.reset();      
     }
 
     // If Y is pressed, flip between field centric and robot centric controlls
     if (xboxInteractionController.getYButtonPressed()) {
+      if (debug) {
+        System.out.println("flipping between field centric and robot centric");
+      }
       fieldCentricControl = !fieldCentricControl;
     }
 
@@ -347,9 +356,19 @@ public class Robot extends TimedRobot {
   public void simulationInit() {
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (debug) { System.out.println("Entering simulationInit Phase");}
+    REVPhysicsSim.getInstance().addSparkMax(leftFrontMotor, DCMotor.getNEO(1));
+    REVPhysicsSim.getInstance().addSparkMax(leftBackMotor, DCMotor.getNEO(1));
+    REVPhysicsSim.getInstance().addSparkMax(rightFrontMotor, DCMotor.getNEO(1));
+    REVPhysicsSim.getInstance().addSparkMax(rightBackMotor, DCMotor.getNEO(1));
   }
 
   /** This function is called periodically whilst in simulation. */
   @Override
-  public void simulationPeriodic() {}
+  public void simulationPeriodic() {
+    REVPhysicsSim.getInstance().run();
+      SmartDashboard.putNumber("Simluated Left Front Motor Power", leftFrontMotor.get());
+      SmartDashboard.putNumber("Simluated Left Back Motor Power", leftBackMotor.get());
+      SmartDashboard.putNumber("Simluated Right Front Motor Power", rightFrontMotor.get());
+      SmartDashboard.putNumber("Simluated Right Back Motor Power", rightBackMotor.get());
+  }
 }
