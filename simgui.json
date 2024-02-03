@@ -17,6 +17,11 @@
         }
       }
     },
+    "PWM Outputs": {
+      "window": {
+        "visible": true
+      }
+    },
     "RoboRIO": {
       "RoboRIO Input": {
         "open": true
@@ -37,6 +42,12 @@
     }
   },
   "NetworkTables Info": {
+    "Connections": {
+      "open": true
+    },
+    "Server": {
+      "open": true
+    },
     "visible": true
   }
 }

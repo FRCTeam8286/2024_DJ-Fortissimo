@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 import edu.wpi.first.wpilibj.Timer;
 import com.revrobotics.CANSparkMax;
@@ -23,6 +24,9 @@ import com.revrobotics.CANSparkLowLevel.MotorType;
  * project.
  */
 public class Robot extends TimedRobot {
+
+  // Setup Debug Mode
+  private static final boolean debug  = true;
 
   // CAN ID values for devices attached to CAN bus
   /**
@@ -98,6 +102,9 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    // If debug mode is on, write a line that lets us know what mode we're entering
+    if (debug) { System.out.println("Entering robotInit Phase");}
+
     // Have LEDs blink in farwell school colors pattern
     blinkinLED.set(ledPattern);
 	  
@@ -117,6 +124,7 @@ public class Robot extends TimedRobot {
     
     // Create a new mecanumDrive Object and associate the motors with it  
     mecanumDrive = new MecanumDrive(leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor);
+
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
     xboxInteractionController = new XboxController(1);  // Replace 1 with the port number of your interaction Xbox controller
@@ -160,11 +168,16 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void autonomousInit() {
+    // If debug mode is on, write a line that lets us know what mode we're entering
+    if (debug) { System.out.println("Entering autonomousInit Phase");}
   }
 
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
+
+  // If debug mode is on, write a line that lets us know what mode we're entering
+  if (debug) { System.out.println("Entering teleopInit Phase");}
 
 	// Set LEDs to Blue so operator can tell the robot is busy initializing
 	blinkinLED.set(ledBlue);
@@ -230,45 +243,66 @@ public class Robot extends TimedRobot {
     
     // Check if the "Start" button is pressed on the movement controller
     if (xboxMovementController.getStartButtonPressed()) {
-		// Set LEDs to Blue so operator can tell the robot is busy calibrating
-		blinkinLED.set(ledBlue);
+
+      // Set LEDs to Blue so operator can tell the robot is busy calibrating
+      blinkinLED.set(ledBlue);
       // Reset the gyro when the "Start" button is pressed
       gyro.calibrate();
       System.out.println("Calibrating Gyro");
+
     }
-    // Output X, Y, and Z values to Smart Dashboard for Troubleshooting
-    SmartDashboard.putNumber("Current X Value", xAxisValue);
-    SmartDashboard.putNumber("Current Y Value", yAxisValue);
-    SmartDashboard.putNumber("Current Z Value", zAxisValue);
     
-    // Output Gyro value to Smart Dashboard for troubleshooting
-    SmartDashboard.putNumber("Current Gyro Rotation", gyro.getRotation2d().getDegrees());
+    // If debug mode is on, provide diagnostic information to the smart dashboard
+    if (debug) {
+
+      // Output X, Y, and Z values to Smart Dashboard for Troubleshooting
+      SmartDashboard.putNumber("Current X Value", xAxisValue);
+      SmartDashboard.putNumber("Current Y Value", yAxisValue);
+      SmartDashboard.putNumber("Current Z Value", zAxisValue);
+
+      // Output Gyro value to Smart Dashboard for troubleshooting
+      SmartDashboard.putNumber("Current Gyro Rotation", gyro.getRotation2d().getDegrees());
+
+    }
 
     // Sending Values to Drive System
     // We only want to specify gyro rotation if we've opted to use field centric controls
 
-    if (fieldCentricControl == false){ 
+    if (fieldCentricControl){
+        mecanumDrive.driveCartesian(
+          filterY.calculate(yAxisValue), 
+          filterX.calculate(xAxisValue), 
+          filterZ.calculate(zAxisValue), 
+          gyro.getRotation2d()
+        );
+    } else{
+        mecanumDrive.driveCartesian(
+          filterY.calculate(yAxisValue), 
+          filterX.calculate(xAxisValue), 
+          filterZ.calculate(zAxisValue)
+        );
+    }
 
-      mecanumDrive.driveCartesian(filterY.calculate(yAxisValue), filterX.calculate(xAxisValue), filterZ.calculate(zAxisValue));
+    //if debug mode is on, provide diagnostic data to the smart dashboard
+    if (debug) {
 
-    } else if (fieldCentricControl == true){
-
-      mecanumDrive.driveCartesian(filterY.calculate(yAxisValue), filterX.calculate(xAxisValue), filterZ.calculate(zAxisValue), gyro.getRotation2d());
+      // Output Motor Values to Smart Dashboard for troubleshooting
+      SmartDashboard.putNumber("Left Front Motor Power", leftFrontMotor.getAppliedOutput());
+      SmartDashboard.putNumber("Left Back Motor Power", leftBackMotor.getAppliedOutput());
+      SmartDashboard.putNumber("Right Front Motor Power", rightFrontMotor.getAppliedOutput());
+      SmartDashboard.putNumber("Right Back Motor Power", rightBackMotor.getAppliedOutput());
 
     }
-    // Output Motor Values to Smart Dashboard for troubleshooting
-    SmartDashboard.putNumber("Left Front Motor Power", leftFrontMotor.getAppliedOutput());
-    SmartDashboard.putNumber("Left Back Motor Power", leftBackMotor.getAppliedOutput());
-    SmartDashboard.putNumber("Right Front Motor Power", rightFrontMotor.getAppliedOutput());
-    SmartDashboard.putNumber("Right Back Motor Power", rightBackMotor.getAppliedOutput());
 
   }
 
   /** This function is called once when the robot is disabled. */
   @Override
   public void disabledInit() {	
-	// Set LEDs to Red so operator can tell the robot is stopped
-	blinkinLED.set(ledBlack);
+    // If debug mode is on, write a line that lets us know what mode we're entering
+    if (debug) { System.out.println("Entering disabledInit Phase");}
+    // Set LEDs to Red so operator can tell the robot is stopped
+    blinkinLED.set(ledBlack);
   }
 
   /** This function is called periodically when disabled. */
@@ -277,7 +311,10 @@ public class Robot extends TimedRobot {
 
   /** This function is called once when test mode is enabled. */
   @Override
-  public void testInit() {}
+  public void testInit() {
+    // If debug mode is on, write a line that lets us know what mode we're entering
+    if (debug) { System.out.println("Entering testInit Phase");}
+  }
 
   /** This function is called periodically during test mode. */
   @Override
@@ -285,7 +322,10 @@ public class Robot extends TimedRobot {
 
   /** This function is called once when the robot is first started up. */
   @Override
-  public void simulationInit() {}
+  public void simulationInit() {
+    // If debug mode is on, write a line that lets us know what mode we're entering
+    if (debug) { System.out.println("Entering simulationInit Phase");}
+  }
 
   /** This function is called periodically whilst in simulation. */
   @Override
