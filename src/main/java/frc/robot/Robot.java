@@ -9,6 +9,7 @@ import edu.wpi.first.wpilibj.drive.MecanumDrive;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.ADXRS450_Gyro;
+import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -65,6 +66,9 @@ public class Robot extends TimedRobot {
   // These boolean variables are used to determine control options
   private boolean fieldCentricControl;
   private boolean twoControllerMode;
+
+  // Movement Speed Variable
+  private double movementSpeed;
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
   SlewRateLimiter filterX = new SlewRateLimiter(1); 
@@ -146,6 +150,9 @@ public class Robot extends TimedRobot {
     gyro.reset();
     gyro.calibrate();
 
+    // Set Top speed to .5
+    movementSpeed = .5;
+
   }
 
   /**
@@ -217,40 +224,52 @@ public class Robot extends TimedRobot {
      *   - Right X Axis: Rotate (when in one-controller mode)
      *   - Start Button: Calibrate Gyro
      *   - Y Button: Toggle Field Centric
-     *   - Right Bumper: Increase top speed
-     *   - Left Bumper: Decrease top speed
+     *   - Right Bumper: Increase movement speed
+     *   - Left Bumper: Decrease movement speed
      *
      * - XboxInteractionController (Port 1):
      *   - Left X Axis: Rotate (when in two-controller mode)
      */
-
-    // TODO: Add a way to adjust top speed with driver's controller "bumpers"
-
-    double yAxisValue = -xboxMovementController.getLeftY() * yModifier; // Remember, Y stick value is reversed
-    double xAxisValue = xboxMovementController.getLeftX() * xModifier; // Counteract imperfect strafing
-    double zAxisValue; // Declare z outside the conditional statement
-
     
-    if (twoControllerMode == true) // zAxis changes based on if we have two controllers (operators) or not
-      {zAxisValue = xboxInteractionController.getLeftX() * zModifier;
-    } else {
-      zAxisValue = xboxMovementController.getRightX() * zModifier;
+     // 
+     if (xboxMovementController.getRightBumperPressed()){
+
+        // Increase movement speed by 0.25 (up to a maximum of 1.0)
+        movementSpeed += 0.25;
+        movementSpeed = Math.min(movementSpeed, 1.0);
+
+    } else if (xboxMovementController.getLeftBumperPressed()) {
+
+        // Decrease movement speed by 0.25 (down to a minimum of 0.25)
+        movementSpeed -= 0.25;
+        movementSpeed = Math.max(movementSpeed, 0.25);
+
     }
 
-    // Apply Deadzones
-    if (Math.abs(yAxisValue) < yDeadZone) {yAxisValue = 0;}
-    if (Math.abs(xAxisValue) < xDeadZone) {xAxisValue = 0;}
-    if (Math.abs(zAxisValue) < zDeadZone) {zAxisValue = 0;}
+    // Movement variables provided they are above deadzone threshold
+    double yAxisValue = 0;
+    double xAxisValue = 0;
+    double zAxisValue = 0;
+    if (Math.abs(xboxMovementController.getLeftY()) > yDeadZone) {
+      yAxisValue = -xboxMovementController.getLeftY() * movementSpeed * yModifier; // Remember, Y stick value is reversed
+    }
+
+    if (Math.abs(xboxMovementController.getLeftX()) > xDeadZone) {
+      xAxisValue = xboxMovementController.getLeftX() * movementSpeed * xModifier; 
+    }    
+
+    if (twoControllerMode == true && Math.abs(xboxInteractionController.getLeftX()) > zDeadZone) // zAxis changes based on if we have two controllers (operators) or not
+      {zAxisValue = xboxInteractionController.getLeftX() * zModifier;
+    } else if (Math.abs(xboxMovementController.getRightX()) > zDeadZone){
+      zAxisValue = xboxMovementController.getRightX() * zModifier;
+    } 
     
     // Reset the gyro when the "Start" button is pressed, and set the LED to blue so the operators know it's busy
     if (xboxMovementController.getStartButtonPressed()) {
-
       blinkinLED.set(ledBlue);
       
       System.out.println("Calibrating Gyro");
-      gyro.reset();
-      
-
+      gyro.reset();      
     }
 
     // If Y is pressed, flip between field centric and robot centric controlls
