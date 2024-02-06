@@ -341,8 +341,6 @@ public class Robot extends TimedRobot {
   public void disabledInit() {	
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (debug) { System.out.println("Entering disabledInit Phase");}
-    // Set LEDs to Red so operator can tell the robot is stopped
-    blinkinLED.set(ledBlack);
   }
 
   /** This function is called periodically when disabled. */
@@ -351,7 +349,7 @@ public class Robot extends TimedRobot {
 
   /** This function is called once when test mode is enabled. */
   @Override
-  public void testInit() {}
+  public void testInit() {if (debug) { System.out.println("Entering testInit Phase");}}
 
   /** This function is called periodically during test mode. */
   @Override
