@@ -14,6 +14,9 @@ import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
+
+import java.util.concurrent.TimeUnit;
+
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.REVPhysicsSim;
@@ -260,13 +263,15 @@ public class Robot extends TimedRobot {
     } 
     
     // Reset the gyro when the "Start" button is pressed, and set the LED to blue so the operators know it's busy
+    // TODO: Make LED Stay Blue for a second so the know's it happened 
     if (xboxMovementController.getStartButtonPressed()) {
       blinkinLED.set(ledBlue);
       
       if (debug) {
         System.out.println("Calibrating Gyro");
       }
-      gyro.reset();      
+      gyro.reset();
+  
     }
 
     // If Y is pressed, flip between field centric and robot centric controls
