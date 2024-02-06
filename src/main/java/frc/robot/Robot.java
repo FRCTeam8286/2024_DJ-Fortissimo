@@ -269,8 +269,8 @@ public class Robot extends TimedRobot {
       gyro.reset();      
     }
 
-    // If Y is pressed, flip between field centric and robot centric controlls
-    if (xboxInteractionController.getYButtonPressed()) {
+    // If Y is pressed, flip between field centric and robot centric controls
+    if (xboxMovementController.getYButtonPressed()) {
       if (debug) {
         System.out.println("flipping between field centric and robot centric");
       }
