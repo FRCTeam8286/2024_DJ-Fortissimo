@@ -455,7 +455,7 @@ public class Robot extends TimedRobot {
     // We only want to specify gyro rotation if we've opted to use field centric controls
 
     if (fieldCentricControl){
-      double botHeading = Math.toRadians(gyro.getAngle());
+      double botHeading = gyro.getRotation2d().getRadians();
       double rotX = filterX.calculate(xAxisValue) * Math.cos(-botHeading) - filterY.calculate(yAxisValue) * Math.sin(-botHeading);
       double rotY = filterX.calculate(xAxisValue) * Math.sin(-botHeading) + filterY.calculate(yAxisValue) * Math.cos(-botHeading);
       double denominator = Math.max(Math.abs(filterY.calculate(yAxisValue)) + Math.abs(filterX.calculate(xAxisValue)) + Math.abs(filterZ.calculate(zAxisValue)), 1);
