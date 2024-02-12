@@ -7,7 +7,7 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.ADXRS450_Gyro;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
@@ -17,6 +17,8 @@ import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.REVPhysicsSim;
+
+import com.kauailabs.navx.frc.AHRS;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -54,8 +56,10 @@ public class Robot extends TimedRobot {
   private XboxController xboxInteractionController;
 
   // Create objects related to drive train
-  private ADXRS450_Gyro gyro = new ADXRS450_Gyro(SPI.Port.kOnboardCS0);
   private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;
+
+  // Import AHRS
+  AHRS ahrs;
 
   // Create objects and variables related to UI choices 
   private SendableChooser<Boolean> controlModeChooser = new SendableChooser<>();
@@ -141,9 +145,23 @@ public class Robot extends TimedRobot {
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
     SmartDashboard.putData("Controller Mode Chooser", controllerModeChooser);
 
-    // Calibrate and Reset Gyro
-    gyro.reset();
-    gyro.calibrate();
+    try {
+      /***********************************************************************
+       * navX-MXP: - Communication via RoboRIO MXP (SPI, I2C) and USB. - See
+       * http://navx-mxp.kauailabs.com/guidance/selecting-an-interface.
+       * 
+       * navX-Micro: - Communication via I2C (RoboRIO MXP or Onboard) and USB. - See
+       * http://navx-micro.kauailabs.com/guidance/selecting-an-interface.
+       * 
+       * VMX-pi: - Communication via USB. - See
+       * https://vmx-pi.kauailabs.com/installation/roborio-installation/
+       * 
+       * Multiple navX-model devices on a single robot are supported.
+       ************************************************************************/
+      ahrs = new AHRS(SPI.Port.kMXP);
+    } catch (RuntimeException ex) {
+      DriverStation.reportError("Error instantiating navX MXP:  " + ex.getMessage(), true);
+    }
 
     // Set Top speed to .5
     movementSpeed = .5;
@@ -217,7 +235,7 @@ public class Robot extends TimedRobot {
      *   - Left Y Axis: Drive forward/reverse
      *   - Left X Axis: Strafe left/right
      *   - Right X Axis: Rotate (when in one-controller mode)
-     *   - Start Button: Calibrate Gyro
+     *   - Start Button: Calibrate Ahrs
      *   - Y Button: Toggle Field Centric
      *   - Right Bumper: Increase movement speed
      *   - Left Bumper: Decrease movement speed
@@ -259,15 +277,15 @@ public class Robot extends TimedRobot {
       zAxisValue = filterZ.calculate(xboxMovementController.getRightX() * zModifier);
     } 
     
-    // Reset the gyro when the "Start" button is pressed, and set the LED to blue so the operators know it's busy
+    // Reset the Ahrs when the "Start" button is pressed, and set the LED to blue so the operators know it's busy
     // TODO: Make LED Stay Blue for a second so the know's it happened 
     if (xboxMovementController.getStartButtonPressed()) {
       blinkinLED.set(ledBlue);
       
       if (debug) {
-        System.out.println("Calibrating Gyro");
+        System.out.println("Calibrating Ahrs");
       }
-      gyro.reset();
+      ahrs.reset();
   
     }
 
@@ -287,8 +305,8 @@ public class Robot extends TimedRobot {
       SmartDashboard.putNumber("Current Y Value", yAxisValue);
       SmartDashboard.putNumber("Current Z Value", zAxisValue);
 
-      // Output Gyro value to Smart Dashboard for troubleshooting
-      SmartDashboard.putNumber("Current Gyro Rotation", gyro.getRotation2d().getDegrees());
+      // Output Ahrs value to Smart Dashboard for troubleshooting
+      SmartDashboard.putNumber("Current ahrs Rotation", ahrs.getRotation2d().getDegrees());
 
     }
 
@@ -296,8 +314,8 @@ public class Robot extends TimedRobot {
    
     if (fieldCentricControl){
 
-      // Grab current position from Gyro
-      double botHeading = gyro.getRotation2d().getRadians();
+      // Grab current position from ahrs
+      double botHeading = ahrs.getRotation2d().getRadians();
 
       // Rotate the movement direction counter to the bot's rotation
       double rotX = xAxisValue * Math.cos(-botHeading) - yAxisValue * Math.sin(-botHeading);
