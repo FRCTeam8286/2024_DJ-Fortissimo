@@ -302,7 +302,7 @@ public class Robot extends TimedRobot {
       if (debug) {
         System.out.println("flipping between field centric and robot centric");
       }
-      externalRoller.set(Utils.limit(speed));
+      fieldCentricControl = !fieldCentricControl;
     }
 
     // If X is pressed while in single controller mode, run intake for 5 seconds
