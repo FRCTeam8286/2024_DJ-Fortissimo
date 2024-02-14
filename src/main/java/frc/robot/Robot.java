@@ -125,14 +125,15 @@ public class Robot extends TimedRobot {
     rightFrontMotor = new CANSparkMax(rightFrontDeviceID, MotorType.kBrushless);
     rightBackMotor = new CANSparkMax(rightBackDeviceID, MotorType.kBrushless);
 
-    intakeRoller = new CANSparkMax(intakeRollerDeviceID, MotorType.kBrushless);
+    intakeMotor = new CANSparkMax(intakeRollerDeviceID, MotorType.kBrushless);
 
-    // Invert the right motors
+    // Motor inversions
     
     leftFrontMotor.setInverted(false);
     leftBackMotor.setInverted(false);
     rightFrontMotor.setInverted(true);
     rightBackMotor.setInverted(true);
+    intakeMotor.setInverted(false);
 
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
@@ -310,9 +311,9 @@ public class Robot extends TimedRobot {
             if (debug) {
                 System.out.println("Start Intake");
             }
-            intakeRoller.set(0.2);
+            intakeMotor.set(0.2);
 	    Timer.delay(5);
-	    intakeRoller.set(0);
+	    intakeMotor.set(0);
         }
     }
 
