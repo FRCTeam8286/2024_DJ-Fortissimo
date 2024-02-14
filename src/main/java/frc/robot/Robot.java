@@ -41,12 +41,14 @@ public class Robot extends TimedRobot {
   *   - Front Right Motor: CAN ID 12
   *   - Back Right Motor: CAN ID 13
   *   - Intake Roller Motor: CAN ID 20
+  *   - Intake Roller Motor: CAN ID 21
   */
   private static final int leftFrontDeviceID = 10; 
   private static final int leftBackDeviceID = 11; 
   private static final int rightFrontDeviceID = 12; 
   private static final int rightBackDeviceID = 13; 
   private static final int intakeRollerDeviceID = 20; 
+  private static final int shooterDeviceID = 21; 
   
   // Assuming Blinkin LED controller is connected to PWM port 0
   private static final int blinkinPWMChannel = 0;
@@ -58,8 +60,8 @@ public class Robot extends TimedRobot {
   private XboxController xboxMovementController;
   private XboxController xboxInteractionController;
 
-  // Create objects related to drive train
-  private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor, intakeMotor;
+  // Create motor objects
+  private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor, intakeMotor, shooterMotor;
 
   // Import AHRS
   AHRS ahrs;
@@ -126,6 +128,7 @@ public class Robot extends TimedRobot {
     rightBackMotor = new CANSparkMax(rightBackDeviceID, MotorType.kBrushless);
 
     intakeMotor = new CANSparkMax(intakeRollerDeviceID, MotorType.kBrushless);
+    shooterMotor = new CANSparkMax(intakeRollerDeviceID, MotorType.kBrushless);
 
     // Motor inversions
     
@@ -134,6 +137,7 @@ public class Robot extends TimedRobot {
     rightFrontMotor.setInverted(true);
     rightBackMotor.setInverted(true);
     intakeMotor.setInverted(false);
+    shooterMotor.setInverted(false);
 
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
@@ -240,16 +244,18 @@ public class Robot extends TimedRobot {
      * - XboxMovementController (Port 0):
      *   - Left Y Axis: Drive forward/reverse
      *   - Left X Axis: Strafe left/right
-     *   - Right X Axis: Rotate (when in one-controller mode)
      *   - Start Button: Calibrate Ahrs
      *   - Y Button: Toggle Field Centric
      *   - Right Bumper: Increase movement speed
      *   - Left Bumper: Decrease movement speed
-     *   - X Button: Run Intake for 5 seconds
+     *   - Right X Axis: Rotate (when in one-controller mode)
+     *   - X Button: Run Intake for 5 seconds (when in one-controller mode)
+     *   - A Button: Run Shooter for 5 seconds (when in one-controller mode)
      *
      * - XboxInteractionController (Port 1):
      *   - Left X Axis: Rotate (when in two-controller mode)
-     *   - Left Trugger: Run Intake
+     *   - Left Trigger: Run Intake
+     *   - Right Trigger: Run Shooter
      */
     
      // 
@@ -317,7 +323,20 @@ public class Robot extends TimedRobot {
         }
     }
 
+    // If A is pressed while in single controller mode, run Shooter for 5 seconds
+    if (twoControllerMode == false) {
+        if (xboxMovementController.getAButtonPressed()) {
+            if (debug) {
+                System.out.println("Start Shooter");
+            }
+            shooterMotor.set(0.2);
+	    Timer.delay(5);
+	    shooterMotor.set(0);
+        }
+    }
+
     // TODO: Intake Code for Two Controller Mode
+    // TODO: Shooter Code for Two Controller Mode
 
     // If debug mode is on, provide diagnostic information to the smart dashboard
     if (debug) {
