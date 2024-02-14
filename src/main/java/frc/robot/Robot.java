@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
@@ -39,11 +40,13 @@ public class Robot extends TimedRobot {
   *   - Back Left Motor: CAN ID 11
   *   - Front Right Motor: CAN ID 12
   *   - Back Right Motor: CAN ID 13
+  *   - Intake Roller Motor: CAN ID 20
   */
   private static final int leftFrontDeviceID = 10; 
   private static final int leftBackDeviceID = 11; 
   private static final int rightFrontDeviceID = 12; 
   private static final int rightBackDeviceID = 13; 
+  private static final int intakeRollerDeviceID = 20; 
   
   // Assuming Blinkin LED controller is connected to PWM port 0
   private static final int blinkinPWMChannel = 0;
@@ -56,7 +59,7 @@ public class Robot extends TimedRobot {
   private XboxController xboxInteractionController;
 
   // Create objects related to drive train
-  private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;
+  private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor, intakeMotor;
 
   // Import AHRS
   AHRS ahrs;
@@ -121,6 +124,8 @@ public class Robot extends TimedRobot {
     leftBackMotor = new CANSparkMax(leftBackDeviceID, MotorType.kBrushless);
     rightFrontMotor = new CANSparkMax(rightFrontDeviceID, MotorType.kBrushless);
     rightBackMotor = new CANSparkMax(rightBackDeviceID, MotorType.kBrushless);
+
+    intakeRoller = new CANSparkMax(intakeRollerDeviceID, MotorType.kBrushless);
 
     // Invert the right motors
     
@@ -239,9 +244,11 @@ public class Robot extends TimedRobot {
      *   - Y Button: Toggle Field Centric
      *   - Right Bumper: Increase movement speed
      *   - Left Bumper: Decrease movement speed
+     *   - X Button: Run Intake for 5 seconds
      *
      * - XboxInteractionController (Port 1):
      *   - Left X Axis: Rotate (when in two-controller mode)
+     *   - Left Trugger: Run Intake
      */
     
      // 
@@ -294,8 +301,22 @@ public class Robot extends TimedRobot {
       if (debug) {
         System.out.println("flipping between field centric and robot centric");
       }
-      fieldCentricControl = !fieldCentricControl;
+      externalRoller.set(Utils.limit(speed));
     }
+
+    // If X is pressed while in single controller mode, run intake for 5 seconds
+    if (twoControllerMode == false) {
+        if (xboxMovementController.getXButtonPressed()) {
+            if (debug) {
+                System.out.println("Start Intake");
+            }
+            intakeRoller.set(0.2);
+	    Timer.delay(5);
+	    intakeRoller.set(0);
+        }
+    }
+
+    // TODO: Intake Code for Two Controller Mode
 
     // If debug mode is on, provide diagnostic information to the smart dashboard
     if (debug) {
