@@ -238,24 +238,42 @@ public class Robot extends TimedRobot {
       fieldCentricControl = !fieldCentricControl;
     }
 
-    // If X is pressed while in single controller mode, run intake for 5 seconds
     if (twoControllerMode == false) {
-        if (xboxMovementController.getXButtonPressed()) {
-            if (Constants.debug) {
-                System.out.println("Start Intake");
-            }
-            interactionSystem.timedIntake(0.2, 1);
+      // If X is pressed while in single controller mode, run intake for 5 seconds
+      if (xboxMovementController.getXButtonPressed()) {
+        if (Constants.debug) {
+          System.out.println("Start Intake");
         }
-    }
+        interactionSystem.timedIntake(0.2, 1);
+      }
+      // If A is pressed while in single controller mode, run Shooter for 5 seconds
+      if (xboxMovementController.getAButtonPressed()) {
+        if (Constants.debug) {
+          System.out.println("Start Shooter");
+        }
+        interactionSystem.timedShooter(0.2, 1);
+      }
+    } else {
 
-    // If A is pressed while in single controller mode, run Shooter for 5 seconds
-    if (twoControllerMode == false) {
-        if (xboxMovementController.getAButtonPressed()) {
-            if (Constants.debug) {
-                System.out.println("Start Shooter");
-            }
-            interactionSystem.timedShooter(0.2, 1);
+      // If Right Trigger is pressed on the interaction controller, run the shooter
+      if (xboxInteractionController.getRightTriggerAxis() > 0.5) {
+        if (Constants.debug) {
+          System.out.println("Start Shooter");
         }
+        interactionSystem.runShooter(Constants.shooterSpeed); // Adjust Constants.shooterSpeed to your desired speed
+      } else {
+        interactionSystem.stopShooter();
+      }
+
+      // If Left Trigger is pressed on the interaction controller, run the intake
+      if (xboxInteractionController.getLeftTriggerAxis() > 0.5) {
+        if (Constants.debug) {
+          System.out.println("Start Intake");
+        }
+        interactionSystem.runIntake(Constants.intakeSpeed); // Adjust Constants.intakeSpeed to your desired speed
+      } else {
+        interactionSystem.stopIntake();
+      }
     }
 
     // If debug mode is on, provide diagnostic information to the smart dashboard
