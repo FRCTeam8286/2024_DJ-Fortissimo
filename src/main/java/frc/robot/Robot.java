@@ -11,7 +11,6 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 
 import com.kauailabs.navx.frc.AHRS;
 
@@ -23,11 +22,6 @@ import com.kauailabs.navx.frc.AHRS;
  */
 public class Robot extends TimedRobot {
 
-
-  
-  // Create PWMSparkMax for controlling Blinkin LED
-  private PWMSparkMax blinkinLED = new PWMSparkMax(Constants.blinkinPWMChannel);
-
   // Define Controller Objects, we'll be associating these with controllers later
   private XboxController xboxMovementController;
   private XboxController xboxInteractionController;
@@ -36,7 +30,7 @@ public class Robot extends TimedRobot {
   private DriveTrain DriveTrain;
   private InteractionSystem interactionSystem;
 
-  // Import AHRS
+  // AHRS Variable
   AHRS ahrs;
 
   // Call Simulation system
@@ -44,19 +38,22 @@ public class Robot extends TimedRobot {
 
   // Create objects and variables related to UI choices 
   private SendableChooser<Boolean> controlModeChooser = new SendableChooser<>();
-  private SendableChooser<Boolean> controllerModeChooser = new SendableChooser<>();
 
   // These boolean variables are used to determine control options
   private boolean fieldCentricControl;
-  private boolean twoControllerMode;
 
   // Movement Speed Variable
   private double movementSpeed;
+
+  // isGamePieceLoaded Variable
+  private boolean isGamePieceLoaded;
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
   SlewRateLimiter filterX = new SlewRateLimiter(1); 
   SlewRateLimiter filterY = new SlewRateLimiter(1);
   SlewRateLimiter filterZ = new SlewRateLimiter(1);
+
+  LEDStateManager ledStateManager;
   
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -64,15 +61,19 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
+    
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (Constants.debug) { System.out.println("Entering robotInit Phase");}
-    
-    DriveTrain = new DriveTrain();
-    interactionSystem = new InteractionSystem();
-    simulation = new Simulation(DriveTrain);
 
-    // Have LEDs blink in farwell school colors pattern
-    blinkinLED.set(Constants.ledPattern);
+
+    ledStateManager = new LEDStateManager();
+
+    // Pass LEDStateManager object to InteractionSystem constructor
+    interactionSystem = new InteractionSystem(ledStateManager);
+
+    // Drive train and Simulation
+    DriveTrain = new DriveTrain();
+    simulation = new Simulation(DriveTrain);
 
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
@@ -82,13 +83,8 @@ public class Robot extends TimedRobot {
     controlModeChooser.addOption("Field-Centric Control", true);
     controlModeChooser.addOption("Robot-Centric Control", false);
 
-    // Add options to the controllerModeChooser
-    controllerModeChooser.addOption("One Controller Mode", false);
-    controllerModeChooser.addOption("Two Controller Mode", true);
-
     // Put the chooser on the SmartDashboard
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
-    SmartDashboard.putData("Controller Mode Chooser", controllerModeChooser);
 
     try {
       // Attempt to initialize the AHRS (Attitude and Heading Reference System) device using the MXP SPI port.
@@ -138,21 +134,17 @@ public class Robot extends TimedRobot {
   // If debug mode is on, write a line that lets us know what mode we're entering
   if (Constants.debug) { System.out.println("Entering teleopInit Phase");}
 
-	// Set LEDs to Blue so operator can tell the robot is busy initializing
-	blinkinLED.set(Constants.ledBlue);
     // If statement to see if our Mode Choser outputs worked, and if not, have some fall back values (Mostly for Simulation Mode)
-    if (controlModeChooser.getSelected() != null && controllerModeChooser.getSelected() != null) {
+    if (controlModeChooser.getSelected() != null) {
       
       // Set variables fieldCentricControl and twoControllerMode to options selected on interactive chooser by the operators
       fieldCentricControl = controlModeChooser.getSelected();
-      twoControllerMode = controllerModeChooser.getSelected();
 
     } else {
 
       // Handle the case where one or both values are null (simulation mode). Also log message because that is probably interesting to see
       System.err.println("Error: Unable to retrieve control mode or controller mode from choosers. Using default values.");
       fieldCentricControl = false;
-      twoControllerMode = false;
       
     }
 
@@ -161,8 +153,6 @@ public class Robot extends TimedRobot {
   /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-  // Set LEDs to Red so operator can tell the robot is in Teleop mode but no item is picked up
-	blinkinLED.set(Constants.ledRed);
     
 	// Define Controller Inputs
 
@@ -175,28 +165,30 @@ public class Robot extends TimedRobot {
      *   - Y Button: Toggle Field Centric
      *   - Right Bumper: Increase movement speed
      *   - Left Bumper: Decrease movement speed
-     *   - Right X Axis: Rotate (when in one-controller mode)
-     *   - X Button: Run Intake for 5 seconds (when in one-controller mode)
-     *   - A Button: Run Shooter for 5 seconds (when in one-controller mode)
      *
      * - XboxInteractionController (Port 1):
-     *   - Left X Axis: Rotate (when in two-controller mode)
+     *   - Left X Axis: Rotate
      *   - Left Trigger: Run Intake
      *   - Right Trigger: Run Shooter
      */
     
      // 
+
+    if (isGamePieceLoaded == true){
+      ledStateManager.handleState("Game Piece Loaded");
+    } else {ledStateManager.handleState("No Game Piece Loaded");}
+
      if (xboxMovementController.getRightBumperPressed()){
 
-        // Increase movement speed by 0.25 (up to a maximum of 1.0)
-        movementSpeed += 0.25;
-        movementSpeed = Math.min(movementSpeed, 1.0);
+      // Increase movement speed by 0.25 (up to a maximum of 1.0)
+      movementSpeed += 0.25;
+      movementSpeed = Math.min(movementSpeed, 1.0);
 
     } else if (xboxMovementController.getLeftBumperPressed()) {
 
-        // Decrease movement speed by 0.25 (down to a minimum of 0.25)
-        movementSpeed -= 0.25;
-        movementSpeed = Math.max(movementSpeed, 0.25);
+      // Decrease movement speed by 0.25 (down to a minimum of 0.25)
+      movementSpeed -= 0.25;
+      movementSpeed = Math.max(movementSpeed, 0.25);
 
     }
 
@@ -212,16 +204,13 @@ public class Robot extends TimedRobot {
       xAxisValue = filterX.calculate(xboxMovementController.getLeftX() * movementSpeed * Constants.xModifier); 
     }    
 
-    if (twoControllerMode == true && Math.abs(xboxInteractionController.getLeftX()) > Constants.zDeadZone) // zAxis changes based on if we have two controllers (operators) or not
+    if (Math.abs(xboxInteractionController.getLeftX()) > Constants.zDeadZone) // zAxis changes based on if we have two controllers (operators) or not
       {zAxisValue = filterZ.calculate(xboxInteractionController.getLeftX() * Constants.zModifier);
-    } else if (Math.abs(xboxMovementController.getRightX()) > Constants.zDeadZone){
-      zAxisValue = filterZ.calculate(xboxMovementController.getRightX() * Constants.zModifier);
-    } 
+    }
     
     // Reset the Ahrs when the "Start" button is pressed, and set the LED to blue so the operators know it's busy
     // TODO: Make LED Stay Blue for a second so the know's it happened 
     if (xboxMovementController.getStartButtonPressed()) {
-      blinkinLED.set(Constants.ledBlue);
       
       if (Constants.debug) {
         System.out.println("Calibrating Ahrs");
@@ -230,50 +219,26 @@ public class Robot extends TimedRobot {
   
     }
 
-    // If Y is pressed, flip between field centric and robot centric controls
-    if (xboxMovementController.getYButtonPressed()) {
+    // If Right Trigger is pressed on the interaction controller, run the shooter
+    if (xboxInteractionController.getRightTriggerAxis() > 0.5) {
       if (Constants.debug) {
-        System.out.println("flipping between field centric and robot centric");
+        System.out.println("Start Shooter");
       }
-      fieldCentricControl = !fieldCentricControl;
+      interactionSystem.runShooter(Constants.shooterSpeed); // Adjust Constants.shooterSpeed to your desired speed
+      // TODO Pull from Limit Switch to see if a peice is still loaded 
+    } else {
+      interactionSystem.stopShooter();
     }
 
-    if (twoControllerMode == false) {
-      // If X is pressed while in single controller mode, run intake for 5 seconds
-      if (xboxMovementController.getXButtonPressed()) {
-        if (Constants.debug) {
-          System.out.println("Start Intake");
-        }
-        interactionSystem.timedIntake(0.2, 1);
+    // If Left Trigger is pressed on the interaction controller, run the intake
+    if (xboxInteractionController.getLeftTriggerAxis() > 0.5) {
+      if (Constants.debug) {
+        System.out.println("Start Intake");
       }
-      // If A is pressed while in single controller mode, run Shooter for 5 seconds
-      if (xboxMovementController.getAButtonPressed()) {
-        if (Constants.debug) {
-          System.out.println("Start Shooter");
-        }
-        interactionSystem.timedShooter(0.2, 1);
-      }
+      interactionSystem.runIntake(Constants.intakeSpeed); // Adjust Constants.intakeSpeed to your desired speed
+      // TODO Pull from Limit Switch to see if a peice is still loaded 
     } else {
-
-      // If Right Trigger is pressed on the interaction controller, run the shooter
-      if (xboxInteractionController.getRightTriggerAxis() > 0.5) {
-        if (Constants.debug) {
-          System.out.println("Start Shooter");
-        }
-        interactionSystem.runShooter(Constants.shooterSpeed); // Adjust Constants.shooterSpeed to your desired speed
-      } else {
-        interactionSystem.stopShooter();
-      }
-
-      // If Left Trigger is pressed on the interaction controller, run the intake
-      if (xboxInteractionController.getLeftTriggerAxis() > 0.5) {
-        if (Constants.debug) {
-          System.out.println("Start Intake");
-        }
-        interactionSystem.runIntake(Constants.intakeSpeed); // Adjust Constants.intakeSpeed to your desired speed
-      } else {
-        interactionSystem.stopIntake();
-      }
+      interactionSystem.stopIntake();
     }
 
     // If debug mode is on, provide diagnostic information to the smart dashboard
