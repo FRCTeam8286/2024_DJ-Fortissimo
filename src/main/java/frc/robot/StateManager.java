@@ -3,7 +3,7 @@ import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 import edu.wpi.first.wpilibj.Timer;
 
 
-public class LEDStateManager {
+public class StateManager {
 
     /**The robot can be in a few states, with corresponding LED colors
      * 
@@ -19,12 +19,12 @@ public class LEDStateManager {
     */
 
     // Setup LED State Codes
-    private static final int DEFAULT_COLOR = 0;
-    private static final int RED_COLOR = 1;
-    private static final int GREEN_COLOR = 2;
-    private static final int BLUE_COLOR = 3;
-    private static final int YELLOW_COLOR = 4;
-    private static final int ORANGE_COLOR = 5;
+    private static final int defaultColor = 0;
+    private static final int redColor = 1;
+    private static final int greenColor = 2;
+    private static final int blueColor = 3;
+    private static final int yellowColor = 4;
+    private static final int orangeColor = 5;
 
     // Setup LED PWM Outputs
     public static final double ledRed = 0.61;
@@ -37,27 +37,30 @@ public class LEDStateManager {
 
     private PWMSparkMax blinkinLED = new PWMSparkMax(Constants.blinkinPWMChannel);
 
-    private int currentColor = DEFAULT_COLOR;
-    private int nonOverrideState = DEFAULT_COLOR; // Variable to store the current non-override state
+    private int currentColor = defaultColor;
+    private int nonOverrideState = defaultColor; // Variable to store the current non-override state
 
     private Timer overrideTimer = new Timer(); // Timer for handling override states
+
+    private int currentState;
+    private int currentNonOverrideState;
 
     // Method to set LED color based on the current state
     public void setLEDColor() {
         switch (currentColor) {
-            case RED_COLOR:
+            case redColor:
                 blinkinLED.set(ledRed);
                 break;
-            case GREEN_COLOR:
+            case greenColor:
                 blinkinLED.set(ledGreen);
                 break;
-            case BLUE_COLOR:
+            case blueColor:
                 blinkinLED.set(ledBlue);
                 break;
-            case YELLOW_COLOR:
+            case yellowColor:
                 blinkinLED.set(ledYellow);
                 break;
-            case ORANGE_COLOR:
+            case orangeColor:
                 blinkinLED.set(ledOrange);
                 break;
             default:
@@ -67,22 +70,25 @@ public class LEDStateManager {
     }
 
     // Method to handle state transitions and overrides
-    public void handleState(String newState) {
-        switch (newState) {
-            case "No Game Piece Loaded":
-                nonOverrideState = RED_COLOR;
+    public void setState(int desiredState) {
+        currentState = desiredState;
+        switch (desiredState) {
+            case 1:
+                currentNonOverrideState = desiredState;
+                nonOverrideState = redColor;
                 break;
-            case "Game Piece Loaded":
-                nonOverrideState = GREEN_COLOR;
+            case 2:
+                currentNonOverrideState = desiredState;
+                nonOverrideState = greenColor;
                 break;
-            case "Attempting Generic Operation":
-                overrideState(BLUE_COLOR);
+            case 3:
+                overrideState(blueColor);
                 break;
-            case "Attempting to pick up game piece":
-                overrideState(YELLOW_COLOR);
+            case 4:
+                overrideState(yellowColor);
                 break;
-            case "Attempting to Shoot Game Piece":
-                overrideState(ORANGE_COLOR);
+            case 5:
+                overrideState(orangeColor);
                 break;
             default:
                 // Handle other states or default behavior
@@ -107,7 +113,8 @@ public class LEDStateManager {
     }
 
     public void clearOverrideState() {
-        currentColor = DEFAULT_COLOR; // Reset LED state to default color
+        currentState = currentNonOverrideState;
+        currentColor = defaultColor; // Reset LED state to default color
         overrideTimer.stop(); // Stop the override timer
     }
 }

@@ -16,9 +16,9 @@ public class InteractionSystem {
     private boolean isShooterRunning = false;
     private double shooterStartTime = 0;
     private double shooterDuration = 0;
-    private LEDStateManager ledStateManager;
+    private StateManager StateManager;
 
-    public InteractionSystem(LEDStateManager ledStateManager) {
+    public InteractionSystem(StateManager StateManager) {
         // Initializes motors for intake and shooter systems as brushless motors
         leftShooterRoller = new CANSparkMax(Constants.leftShooterRoller, MotorType.kBrushless);
         rightShooterRoller = new CANSparkMax(Constants.rightShooterRoller, MotorType.kBrushless);
@@ -27,7 +27,7 @@ public class InteractionSystem {
 
         // Configure initial motor settings (e.g., inversion)
         configureMotors();
-        this.ledStateManager = ledStateManager; // Assign passed LEDStateManager object to field
+        this.StateManager = StateManager; // Assign passed LEDStateManager object to field
     }
 
     private void configureMotors() {
@@ -50,14 +50,14 @@ public class InteractionSystem {
 
     public void runIntake(double speed) {
         // Sets intake motor speeds; positive values intake, negative values expel
-        ledStateManager.handleState("Attempting to pick up game piece");
+        StateManager.setState(4);
         intakeRoller.set(speed);
     }
 
     public void stopIntake() {
         // Stops the intake motors
         intakeRoller.set(0);
-        ledStateManager.clearOverrideState();
+        StateManager.clearOverrideState();
     }
     public void timedIntake(double speed, double duration) {
         // Starts intake motors and schedules it to stop after a duration
@@ -69,14 +69,14 @@ public class InteractionSystem {
 
     public void runShooter(double speed) {
          // Sets shooter motor speeds; positive for shooting, negative could reverse feed
-        ledStateManager.handleState("Attempting to Shoot Game Piece");
+        StateManager.setState(5);
         leftShooterRoller.set(speed);
         rightShooterRoller.set(speed);
     }
 
     public void stopShooter() {
         // Stops the shooter motors
-        ledStateManager.clearOverrideState();
+        StateManager.clearOverrideState();
         leftShooterRoller.set(0);
         rightShooterRoller.set(0);
     }

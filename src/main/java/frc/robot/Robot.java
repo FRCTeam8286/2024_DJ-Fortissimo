@@ -53,7 +53,7 @@ public class Robot extends TimedRobot {
   SlewRateLimiter filterY = new SlewRateLimiter(1);
   SlewRateLimiter filterZ = new SlewRateLimiter(1);
 
-  LEDStateManager ledStateManager;
+  StateManager StateManager;
   
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -66,10 +66,10 @@ public class Robot extends TimedRobot {
     if (Constants.debug) { System.out.println("Entering robotInit Phase");}
 
 
-    ledStateManager = new LEDStateManager();
+    StateManager = new StateManager();
 
     // Pass LEDStateManager object to InteractionSystem constructor
-    interactionSystem = new InteractionSystem(ledStateManager);
+    interactionSystem = new InteractionSystem(StateManager);
 
     // Drive train and Simulation
     DriveTrain = new DriveTrain();
@@ -100,7 +100,7 @@ public class Robot extends TimedRobot {
     movementSpeed = Constants.defaultMovementSpeed;
 
   }
-
+   
   /**
    * This function is called every 20 ms, no matter the mode. Use this for items like diagnostics
    * that you want ran during disabled, autonomous, teleoperated and test.
@@ -175,8 +175,8 @@ public class Robot extends TimedRobot {
      // 
 
     if (isGamePieceLoaded == true){
-      ledStateManager.handleState("Game Piece Loaded");
-    } else {ledStateManager.handleState("No Game Piece Loaded");}
+      StateManager.setState(2);
+    } else {StateManager.setState(1);}
 
      if (xboxMovementController.getRightBumperPressed()){
 
