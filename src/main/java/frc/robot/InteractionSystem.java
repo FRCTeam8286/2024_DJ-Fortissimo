@@ -51,12 +51,12 @@ public class InteractionSystem {
     public void runIntake(double speed) {
         // Sets intake motor speeds; positive values intake, negative values expel
         ledStateManager.handleState("Attempting to pick up game piece");
-        topIntakeMotor.set(speed);
+        intakeRoller.set(speed);
     }
 
     public void stopIntake() {
         // Stops the intake motors
-        topIntakeMotor.set(0);
+        intakeRoller.set(0);
         ledStateManager.clearOverrideState();
     }
     public void timedIntake(double speed, double duration) {
@@ -70,15 +70,15 @@ public class InteractionSystem {
     public void runShooter(double speed) {
          // Sets shooter motor speeds; positive for shooting, negative could reverse feed
         ledStateManager.handleState("Attempting to Shoot Game Piece");
-        topShooterMotor.set(speed);
-        bottomShooterMotor.set(speed);
+        leftShooterRoller.set(speed);
+        rightShooterRoller.set(speed);
     }
 
     public void stopShooter() {
         // Stops the shooter motors
         ledStateManager.clearOverrideState();
-        topShooterMotor.set(0);
-        bottomShooterMotor.set(0);
+        leftShooterRoller.set(0);
+        rightShooterRoller.set(0);
     }
     public void timedShooter(double speed, double duration) {
         // Starts shooter motors and schedules it to stop after a set duration
