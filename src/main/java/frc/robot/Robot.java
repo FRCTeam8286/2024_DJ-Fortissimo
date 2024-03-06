@@ -11,6 +11,7 @@ import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+import edu.wpi.first.wpilibj.DutyCycleEncoder;
 
 import com.kauailabs.navx.frc.AHRS;
 
@@ -31,7 +32,7 @@ public class Robot extends TimedRobot {
   private InteractionSystem interactionSystem;
 
   // AHRS Variable
-  AHRS ahrs;
+  AHRS navx;
 
   // Call Simulation system
   private Simulation simulation;
@@ -53,7 +54,15 @@ public class Robot extends TimedRobot {
   SlewRateLimiter filterY = new SlewRateLimiter(1);
   SlewRateLimiter filterZ = new SlewRateLimiter(1);
 
+  // Create statemanager object to help us keep track of the robot's state
   StateManager StateManager;
+
+  // Create an instance of the intakeArm class
+  private intakeArm intakeArm;
+
+
+  // Create Duty Cycle encoder object for the through bore enocder
+  private DutyCycleEncoder intakeHexEncoder;
   
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -64,7 +73,9 @@ public class Robot extends TimedRobot {
     
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (Constants.debug) { System.out.println("Entering robotInit Phase");}
-
+    
+    intakeHexEncoder = new DutyCycleEncoder(0);
+    intakeArm = new intakeArm();
 
     StateManager = new StateManager();
 
@@ -89,7 +100,7 @@ public class Robot extends TimedRobot {
     try {
       // Attempt to initialize the AHRS (Attitude and Heading Reference System) device using the MXP SPI port.
       // AHRS is used for obtaining the robot's heading and orientation.
-      ahrs = new AHRS(SPI.Port.kMXP);
+      navx = new AHRS(SPI.Port.kMXP);
     } catch (RuntimeException ex) {
       // In case of any exceptions during AHRS initialization (e.g., device not found or communication failure),
       // report the error to the Driver Station. This helps in diagnosing issues with the navX MXP sensor connectivity.
@@ -154,7 +165,7 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     
-	// Define Controller Inputs
+    // Define Controller Inputs
 
     /**
      * Button Mapping:
@@ -170,21 +181,24 @@ public class Robot extends TimedRobot {
      *   - Left X Axis: Rotate
      *   - Left Trigger: Run Intake
      *   - Right Trigger: Run Shooter
+     *   - A Button: Move intake arm to intake position
+     *   - B Button: Move intake arm to amp position
+     *   - X Button: Move intake arm to speaker position
      */
-    
-     // 
 
     if (isGamePieceLoaded == true){
       StateManager.setState(2);
     } else {StateManager.setState(1);}
 
-     if (xboxMovementController.getRightBumperPressed()){
+    if (xboxMovementController.getRightBumperPressed()){
 
       // Increase movement speed by 0.25 (up to a maximum of 1.0)
       movementSpeed += 0.25;
       movementSpeed = Math.min(movementSpeed, 1.0);
 
-    } else if (xboxMovementController.getLeftBumperPressed()) {
+    } 
+    
+    if (xboxMovementController.getLeftBumperPressed()) {
 
       // Decrease movement speed by 0.25 (down to a minimum of 0.25)
       movementSpeed -= 0.25;
@@ -213,14 +227,14 @@ public class Robot extends TimedRobot {
     if (xboxMovementController.getStartButtonPressed()) {
       
       if (Constants.debug) {
-        System.out.println("Calibrating Ahrs");
+        System.out.println("Resetting navx");
       }
-      ahrs.reset();
-  
+      navx.reset();
+
     }
 
     // If Right Trigger is pressed on the interaction controller, run the shooter
-    if (xboxInteractionController.getRightTriggerAxis() > 0.5) {
+    if (xboxInteractionController.getRightTriggerAxis() > 0.2) {
       if (Constants.debug) {
         System.out.println("Start Shooter");
       }
@@ -231,7 +245,7 @@ public class Robot extends TimedRobot {
     }
 
     // If Left Trigger is pressed on the interaction controller, run the intake
-    if (xboxInteractionController.getLeftTriggerAxis() > 0.5) {
+    if (xboxInteractionController.getLeftTriggerAxis() > 0.2) {
       if (Constants.debug) {
         System.out.println("Start Intake");
       }
@@ -240,6 +254,40 @@ public class Robot extends TimedRobot {
     } else {
       interactionSystem.stopIntake();
     }
+
+    // Intake Arm Position
+    if (xboxInteractionController.getAButtonPressed()) {
+      intakeArm.moveToIntakePosition(intakeHexEncoder);
+      if (Constants.debug) {
+        System.out.println("moveToIntakePosition");
+      }
+    } else if (xboxInteractionController.getBButtonPressed()) {
+      intakeArm.moveToAmpPosition(intakeHexEncoder);
+      if (Constants.debug) {
+        System.out.println("moveToAmpPosition");
+      }
+    } else if (xboxInteractionController.getXButtonPressed()) {
+      intakeArm.moveToSpeakerPosition(intakeHexEncoder);
+      if (Constants.debug) {
+        System.out.println("moveToSpeakerPosition");
+      }
+    }
+
+    if (xboxInteractionController.getYButtonPressed()) {
+      interactionSystem.raiseArms();
+    } else if (xboxInteractionController.getStartButtonPressed()){
+      interactionSystem.lowerArms();
+    } else if (xboxInteractionController.getYButtonReleased()){
+      interactionSystem.stopArms();
+    } else if (xboxInteractionController.getStartButtonReleased()){
+      interactionSystem.stopArms();
+    }
+
+    // Call the update method for the intake arm, to keep it moving if needed
+    intakeArm.update(intakeHexEncoder);
+
+    // Call the update method for the interaction system, to keep it moving if needed
+    interactionSystem.update();
 
     // If debug mode is on, provide diagnostic information to the smart dashboard
     if (Constants.debug) {
@@ -250,11 +298,11 @@ public class Robot extends TimedRobot {
       SmartDashboard.putNumber("Current Z Value", zAxisValue);
 
       // Output Ahrs value to Smart Dashboard for troubleshooting
-      SmartDashboard.putNumber("Current ahrs Rotation", ahrs.getRotation2d().getDegrees());
+      SmartDashboard.putNumber("Current ahrs Rotation", navx.getRotation2d().getDegrees());
 
     }
 
-    DriveTrain.drive(fieldCentricControl, yAxisValue, xAxisValue, zAxisValue, ahrs, Constants.debug);
+    DriveTrain.drive(fieldCentricControl, yAxisValue, xAxisValue, zAxisValue, navx, Constants.debug);
   }
 
   /** This function is called once when the robot is disabled. */

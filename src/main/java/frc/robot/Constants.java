@@ -11,16 +11,20 @@ public class Constants {
 
     /**
      * CAN Bus Mapping:
-    * - Motor Controllers:
-    *   - Front Left Motor: CAN ID 10
-    *   - Back Left Motor: CAN ID 11
-    *   - Front Right Motor: CAN ID 12
-    *   - Back Right Motor: CAN ID 13
-    *   - Top Intake Roller Motor: CAN ID 20
-    *   - Bottom Intake Roller Motor: CAN ID 21
-    *   - Top Shooter Roller Motor: CAN ID 30
-    *   - Bottom Shooter Roller Motor: CAN ID 31
-    */
+     * - Motor Controllers:
+     *   - Front Left Motor: CAN ID 10
+     *   - Back Left Motor: CAN ID 11
+     *   - Front Right Motor: CAN ID 12
+     *   - Back Right Motor: CAN ID 13
+     *   - Top Intake Roller Motor: CAN ID 20
+     *   - Bottom Intake Roller Motor: CAN ID 21
+     *   - Top Shooter Roller Motor: CAN ID 30
+     *   - Bottom Shooter Roller Motor: CAN ID 31
+     *   - Intake Arm Motor: CAN ID 30
+     *   - Intake Roller Motor: CAN ID 31
+     *   - Left Climber Motor: CAN ID 40
+     *   - Right Climber Motor: CAN ID 41
+     */
 
     // CAN ID values for devices attached to CAN bus
     public static final int leftFrontMotorID = 10;
@@ -31,6 +35,8 @@ public class Constants {
     public static final int rightShooterRoller = 21;
     public static final int intakeArmID = 30;
     public static final int intakeRollerID = 31;
+    public static final int leftClimberMotorID = 40;
+    public static final int rightClimberMotorID = 41;
 
     // LED
     public static final int blinkinPWMChannel = 0;
@@ -53,4 +59,12 @@ public class Constants {
 
     // Intake Speed Variable
     public static final double intakeSpeed = 0.25;
+
+    // Intake Positions
+    public static final double intakePosition = 0;
+    public static final double ampPosition = 0.25;
+    public static final double speakerPosition = 0.50;
+
+    // Define the position tolerance for the arm movement
+    public static final double intakePositionTolerance = 0.05;
 }
