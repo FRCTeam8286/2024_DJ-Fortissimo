@@ -35,22 +35,6 @@ public class Constants {
     // LED
     public static final int blinkinPWMChannel = 0;
 
-    // Setup some standard LED colors to use with the Blinkin
-    /**
-     * - LED Color Map:
-    *
-    *  - ledRed: Indicates the robot is in Teleop mode but doesn't have the game piece loaded
-    *  - ledBlue: Indicates the robot is busy initializing or calibrating
-    *  - ledBlack: Indicates the robot is stopped or no specific condition
-    *  - ledGreen: Indicates the robot is in Teleop mode and has the game piece loaded
-    *  - ledPattern: Used when robot is first turned on to show Farwell School Colors
-    */
-    public static final double ledRed = 0.61;
-    public static final double ledGreen = 0.77;
-    public static final double ledBlue = 0.87;
-    public static final double ledBlack = 0.99;
-    public static final double ledPattern = 0.51;
-
     // Movement Modifiers
     public static final double yModifier = 0.7;
     public static final double xModifier = 0.7;

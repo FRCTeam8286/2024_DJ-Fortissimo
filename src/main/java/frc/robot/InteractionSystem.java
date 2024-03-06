@@ -16,8 +16,9 @@ public class InteractionSystem {
     private boolean isShooterRunning = false;
     private double shooterStartTime = 0;
     private double shooterDuration = 0;
+    private LEDStateManager ledStateManager;
 
-    public InteractionSystem() {
+    public InteractionSystem(LEDStateManager ledStateManager) {
         // Initializes motors for intake and shooter systems as brushless motors
         leftShooterRoller = new CANSparkMax(Constants.leftShooterRoller, MotorType.kBrushless);
         rightShooterRoller = new CANSparkMax(Constants.rightShooterRoller, MotorType.kBrushless);
@@ -26,6 +27,7 @@ public class InteractionSystem {
 
         // Configure initial motor settings (e.g., inversion)
         configureMotors();
+        this.ledStateManager = ledStateManager; // Assign passed LEDStateManager object to field
     }
 
     private void configureMotors() {
@@ -48,12 +50,14 @@ public class InteractionSystem {
 
     public void runIntake(double speed) {
         // Sets intake motor speeds; positive values intake, negative values expel
-        intakeRoller.set(speed);
+        ledStateManager.handleState("Attempting to pick up game piece");
+        topIntakeMotor.set(speed);
     }
 
     public void stopIntake() {
         // Stops the intake motors
-        intakeRoller.set(0);
+        topIntakeMotor.set(0);
+        ledStateManager.clearOverrideState();
     }
     public void timedIntake(double speed, double duration) {
         // Starts intake motors and schedules it to stop after a duration
@@ -65,14 +69,16 @@ public class InteractionSystem {
 
     public void runShooter(double speed) {
          // Sets shooter motor speeds; positive for shooting, negative could reverse feed
-        leftShooterRoller.set(speed);
-        rightShooterRoller.set(speed);
+        ledStateManager.handleState("Attempting to Shoot Game Piece");
+        topShooterMotor.set(speed);
+        bottomShooterMotor.set(speed);
     }
 
     public void stopShooter() {
         // Stops the shooter motors
-        leftShooterRoller.set(0);
-        rightShooterRoller.set(0);
+        ledStateManager.clearOverrideState();
+        topShooterMotor.set(0);
+        bottomShooterMotor.set(0);
     }
     public void timedShooter(double speed, double duration) {
         // Starts shooter motors and schedules it to stop after a set duration
@@ -81,6 +87,9 @@ public class InteractionSystem {
         shooterStartTime = Timer.getFPGATimestamp(); // Current time
         shooterDuration = duration;
     }
+
+    // TODO Add code to drop intake
+    // TODO Add code to pick up intake
 
     // Call this method from the Robot class's periodic methods to update intake and shooter states
     public void update() {
