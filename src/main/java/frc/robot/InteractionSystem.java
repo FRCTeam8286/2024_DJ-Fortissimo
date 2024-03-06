@@ -9,7 +9,7 @@ public class InteractionSystem {
      * Controls interaction mechanisms like intakes and shooters, offering methods
      * for operation and management of these systems within the robot.
      */
-    private CANSparkMax topIntakeMotor, topShooterMotor, bottomShooterMotor;
+    private CANSparkMax leftShooterRoller, rightShooterRoller, intakeRoller, intakeArm;
     private boolean isIntakeRunning = false;
     private double intakeStartTime = 0;
     private double intakeDuration = 0;
@@ -19,9 +19,10 @@ public class InteractionSystem {
 
     public InteractionSystem() {
         // Initializes motors for intake and shooter systems as brushless motors
-        topIntakeMotor = new CANSparkMax(Constants.topIntakeMotorID, MotorType.kBrushless);
-        topShooterMotor = new CANSparkMax(Constants.topShooterMotorID, MotorType.kBrushless);
-        bottomShooterMotor = new CANSparkMax(Constants.bottomShooterMotorID, MotorType.kBrushless);
+        leftShooterRoller = new CANSparkMax(Constants.leftShooterRoller, MotorType.kBrushless);
+        rightShooterRoller = new CANSparkMax(Constants.rightShooterRoller, MotorType.kBrushless);
+        intakeRoller = new CANSparkMax(Constants.intakeRollerID, MotorType.kBrushless);
+        intakeArm = new CANSparkMax(Constants.intakeArmID, MotorType.kBrushless);
 
         // Configure initial motor settings (e.g., inversion)
         configureMotors();
@@ -29,19 +30,30 @@ public class InteractionSystem {
 
     private void configureMotors() {
          // Sets the direction of motor rotation to match physical setup
-        topIntakeMotor.setInverted(false); // Assumes normal direction is correct for intake
-        topShooterMotor.setInverted(false); // Assumes normal direction is correct for shooter
-        bottomShooterMotor.setInverted(true); // Assumes reversed direction is correct for shooter
+        leftShooterRoller.setInverted(true); 
+        rightShooterRoller.setInverted(false);
+        intakeRoller.setInverted(true);
+        intakeArm.setInverted(false);
+    }
+
+    public void moveArmForward(double speed) {
+        // Sets intake motor speeds; positive values intake, negative values expel
+        intakeArm.set(speed);
+    }
+
+    public void moveArmBackward(double speed) {
+        // Sets intake motor speeds; positive values intake, negative values expel
+        intakeArm.set(-speed);
     }
 
     public void runIntake(double speed) {
         // Sets intake motor speeds; positive values intake, negative values expel
-        topIntakeMotor.set(speed);
+        intakeRoller.set(speed);
     }
 
     public void stopIntake() {
         // Stops the intake motors
-        topIntakeMotor.set(0);
+        intakeRoller.set(0);
     }
     public void timedIntake(double speed, double duration) {
         // Starts intake motors and schedules it to stop after a duration
@@ -53,14 +65,14 @@ public class InteractionSystem {
 
     public void runShooter(double speed) {
          // Sets shooter motor speeds; positive for shooting, negative could reverse feed
-        topShooterMotor.set(speed);
-        bottomShooterMotor.set(speed);
+        leftShooterRoller.set(speed);
+        rightShooterRoller.set(speed);
     }
 
     public void stopShooter() {
         // Stops the shooter motors
-        topShooterMotor.set(0);
-        bottomShooterMotor.set(0);
+        leftShooterRoller.set(0);
+        rightShooterRoller.set(0);
     }
     public void timedShooter(double speed, double duration) {
         // Starts shooter motors and schedules it to stop after a set duration

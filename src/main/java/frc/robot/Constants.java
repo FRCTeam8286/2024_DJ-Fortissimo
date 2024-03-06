@@ -27,10 +27,10 @@ public class Constants {
     public static final int leftBackMotorID = 11;
     public static final int rightFrontMotorID = 12;
     public static final int rightBackMotorID = 13;
-    public static final int topIntakeMotorID = 20;
-    public static final int bottomIntakeMotorID = 21;
-    public static final int topShooterMotorID = 30;
-    public static final int bottomShooterMotorID = 31;
+    public static final int leftShooterRoller = 20;
+    public static final int rightShooterRoller = 21;
+    public static final int intakeArmID = 30;
+    public static final int intakeRollerID = 31;
 
     // LED
     public static final int blinkinPWMChannel = 0;

@@ -151,7 +151,7 @@ public class Robot extends TimedRobot {
 
       // Handle the case where one or both values are null (simulation mode). Also log message because that is probably interesting to see
       System.err.println("Error: Unable to retrieve control mode or controller mode from choosers. Using default values.");
-      fieldCentricControl = false;
+      fieldCentricControl = true;
       twoControllerMode = false;
       
     }
@@ -240,18 +240,18 @@ public class Robot extends TimedRobot {
 
     if (twoControllerMode == false) {
       // If X is pressed while in single controller mode, run intake for 5 seconds
-      if (xboxMovementController.getXButtonPressed()) {
+      if (xboxInteractionController.getXButtonPressed()) {
         if (Constants.debug) {
           System.out.println("Start Intake");
         }
-        interactionSystem.timedIntake(0.2, 1);
+        interactionSystem.timedIntake(0.25, 1);
       }
       // If A is pressed while in single controller mode, run Shooter for 5 seconds
-      if (xboxMovementController.getAButtonPressed()) {
+      if (xboxInteractionController.getAButtonPressed()) {
         if (Constants.debug) {
           System.out.println("Start Shooter");
         }
-        interactionSystem.timedShooter(0.2, 1);
+        interactionSystem.timedShooter(0.40, 1);
       }
     } else {
 
@@ -264,6 +264,11 @@ public class Robot extends TimedRobot {
       } else {
         interactionSystem.stopShooter();
       }
+      if (xboxInteractionController.getLeftBumperPressed()){
+        interactionSystem.moveArmForward(0.1);
+      } else if (xboxInteractionController.getRightBumperPressed()){
+        interactionSystem.moveArmBackward(0.1);
+      } else {interactionSystem.moveArmForward(0);}
 
       // If Left Trigger is pressed on the interaction controller, run the intake
       if (xboxInteractionController.getLeftTriggerAxis() > 0.5) {
