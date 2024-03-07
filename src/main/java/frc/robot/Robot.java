@@ -234,24 +234,24 @@ public class Robot extends TimedRobot {
     }
 
     // If Right Trigger is pressed on the interaction controller, run the shooter
-    if (xboxInteractionController.getRightTriggerAxis() > 0.2) {
+    if (xboxInteractionController.getRightBumperPressed()) {
       if (Constants.debug) {
         System.out.println("Start Shooter");
       }
       interactionSystem.runShooter(Constants.shooterSpeed); // Adjust Constants.shooterSpeed to your desired speed
       // TODO Pull from Limit Switch to see if a peice is still loaded 
-    } else {
+    } else if (xboxInteractionController.getRightBumperReleased()) {
       interactionSystem.stopShooter();
     }
 
     // If Left Trigger is pressed on the interaction controller, run the intake
-    if (xboxInteractionController.getLeftTriggerAxis() > 0.2) {
+    if (xboxInteractionController.getLeftBumperPressed()) {
       if (Constants.debug) {
         System.out.println("Start Intake");
       }
       interactionSystem.runIntake(Constants.intakeSpeed); // Adjust Constants.intakeSpeed to your desired speed
       // TODO Pull from Limit Switch to see if a peice is still loaded 
-    } else {
+    } else if (xboxInteractionController.getLeftBumperReleased()) {
       interactionSystem.stopIntake();
     }
 
@@ -296,7 +296,8 @@ public class Robot extends TimedRobot {
       SmartDashboard.putNumber("Current X Value", xAxisValue);
       SmartDashboard.putNumber("Current Y Value", yAxisValue);
       SmartDashboard.putNumber("Current Z Value", zAxisValue);
-
+      SmartDashboard.putNumber("Current getAbsolutePosition", intakeHexEncoder.getAbsolutePosition());
+      SmartDashboard.putNumber("Current intakehexget", intakeHexEncoder.get());
       // Output Ahrs value to Smart Dashboard for troubleshooting
       SmartDashboard.putNumber("Current ahrs Rotation", navx.getRotation2d().getDegrees());
 
