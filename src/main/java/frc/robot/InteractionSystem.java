@@ -37,7 +37,7 @@ public class InteractionSystem {
          // Sets the direction of motor rotation to match physical setup
         leftShooterRoller.setInverted(true); 
         rightShooterRoller.setInverted(false);
-        intakeRoller.setInverted(true);
+        intakeRoller.setInverted(false);
     }
 
     public void runIntake(double speed) {
@@ -76,6 +76,7 @@ public class InteractionSystem {
         StateManager.setState(5);
         leftShooterRoller.set(speed);
         rightShooterRoller.set(speed);
+        intakeRoller.set(-speed);
         if (Constants.debug) {
 
             // output value to smart dashboard
@@ -89,6 +90,7 @@ public class InteractionSystem {
         StateManager.clearOverrideState();
         leftShooterRoller.set(0);
         rightShooterRoller.set(0);
+        intakeRoller.set(0);
         if (Constants.debug) {
 
             // output value to smart dashboard
