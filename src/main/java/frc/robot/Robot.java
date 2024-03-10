@@ -99,6 +99,9 @@ public class Robot extends TimedRobot {
   // Climber Speeds
   private static final double climberSpeed = 0.20;
 
+  // Intake Arm Speed
+  private static final double intakeArmSpeed = 0.20;
+
   // Define the position tolerance for the arm movement
   private static final double intakePositionTolerance = 0.05;
 
@@ -187,6 +190,10 @@ public class Robot extends TimedRobot {
   private boolean isShooterRunning = false;
   private double shooterStartTime = 0;
   private double shooterDuration = 0;
+  private double intakeArmStartTime = 0;
+  private double intakeArmDuration = 0;
+  private boolean isIntakeArmRunning = false;
+  private boolean intakeArmDirection;
 
   private void setLEDColor() {
     switch (currentColor) {
@@ -497,6 +504,46 @@ public class Robot extends TimedRobot {
         SmartDashboard.putNumber("Intake Arm Hex Encoder Absolute Position", intakeHexEncoder.getAbsolutePosition());
     }
   }
+    private void StopIntakeArm() {
+    intakeArm.set(0);
+    if (debug) {
+
+        // Output Motor Values to Smart Dashboard for troubleshooting
+        SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
+        SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
+        SmartDashboard.putNumber("Intake Arm Hex Encoder Absolute Position", intakeHexEncoder.getAbsolutePosition());
+    }
+  }
+
+  private void timedIntakeArmUp(double duration) {
+    intakeArmStartTime = Timer.getFPGATimestamp(); // Record start time for duration tracking
+    isIntakeArmRunning = true; // Flag to track intake state
+    intakeArmDuration = duration;
+    intakeArmDirection = true;
+  }
+
+  private void timedIntakeArmDown(double duration) {
+    intakeArmStartTime = Timer.getFPGATimestamp(); // Record start time for duration tracking
+    isIntakeArmRunning = true; // Flag to track intake state
+    intakeArmDuration = duration;
+    intakeArmDirection = false;
+  }
+
+  private void timedIntakeArmPeriodic(){
+    if ((intakeStartTime - Timer.getFPGATimestamp()) < intakeDuration) {        
+      // Starts intake motors and schedules it to stop after a duration
+      if (intakeArmDirection==true){
+        MoveIntakeArmUp(intakeArmSpeed); // Start the intake
+        isIntakeArmRunning = true; // Flag to track intake state
+      } else {
+        MoveIntakeArmDown(intakeArmSpeed); // Start the intake
+        isIntakeArmRunning = true; // Flag to track intake state
+      }
+    } else {
+      StopIntakeArm();
+      isIntakeRunning = false;
+    }
+  }
 
   private void GamePieceDetectionPeriodic() {
       isGamePieceLoaded = gamePieceDetectionSwitch.get();  // Pulls the value returned fromt he Game Piece Detection Switch and sets it to isGamePieceLoaded variable
@@ -555,20 +602,10 @@ public class Robot extends TimedRobot {
   }
 
   private void InteractionPeriodic() {    
-
-    // Periodically called to check and update the state of intake and shooter based on timers
-    double currentTime = Timer.getFPGATimestamp();
-    // Checks if intake has exceeded its run duration, then stops it
-    if (isIntakeRunning && ((currentTime - intakeStartTime) >= intakeDuration)) {
-        this.stopIntake();
-        isIntakeRunning = false; // Reset intake running flag
-    }
-    // Checks if shooter has exceeded its run duration, then stops it
-    if (isShooterRunning && ((currentTime - shooterStartTime) >= shooterDuration)) {
-        this.stopShooter();
-        isShooterRunning = false; // Reset shooter running flag
-    }
-
+    IntakeArmPeriodic();
+    ShooterRollerPeriodic();
+    timedIntakeArmPeriodic();
+    GamePieceDetectionPeriodic();
   }
   
   private void IntakeArmPeriodic() {
