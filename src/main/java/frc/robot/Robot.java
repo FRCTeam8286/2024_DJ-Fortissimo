@@ -294,12 +294,24 @@ public class Robot extends TimedRobot {
       clearOverrideState();
   }
 
-  private void timedIntake(double speed, double duration) {
+  private void timedIntake(double duration) {
+    intakeStartTime = Timer.getFPGATimestamp(); // Record start time for duration tracking
+    isIntakeRunning = true; // Flag to track intake state
+    intakeDuration = duration;
+  }
+
+  private void IntakeRollerPeriodic(){
+    if (isGamePieceLoaded == true){
+      stopIntake();
+      isIntakeRunning = false;
+    } else if ((intakeStartTime - Timer.getFPGATimestamp()) < intakeDuration) {        
       // Starts intake motors and schedules it to stop after a duration
-      this.runIntake(speed); // Start the intake
+      runIntake(intakeSpeed); // Start the intake
       isIntakeRunning = true; // Flag to track intake state
-      intakeStartTime = Timer.getFPGATimestamp(); // Record start time for duration tracking
-      intakeDuration = duration; // Set how long the intake should run
+    } else {
+      stopIntake();
+      isIntakeRunning = false;
+    }
   }
 
   private void runShooter(double speed) {
@@ -328,6 +340,23 @@ public class Robot extends TimedRobot {
           SmartDashboard.putNumber("Current Left Shooter Motor Value", leftShooterRoller.getAppliedOutput());
           SmartDashboard.putNumber("Current right Shooter Motor Value", rightShooterRoller.getAppliedOutput());
       }
+  }
+
+  private void timedShooter(double duration) {
+    shooterStartTime = Timer.getFPGATimestamp(); // Record start time for duration tracking
+    isShooterRunning = true; // Flag to track intake state
+    shooterDuration = duration;
+  }
+
+  private void ShooterRollerPeriodic(){
+    if ((shooterStartTime - Timer.getFPGATimestamp()) < shooterDuration) {        
+      // Starts intake motors and schedules it to stop after a duration
+      runShooter(shooterSpeed); // Start the intake
+      isShooterRunning = true; // Flag to track intake state
+    } else {
+      stopShooter();
+      isShooterRunning = false;
+    }
   }
 
   private void RaiseClimbers(){
