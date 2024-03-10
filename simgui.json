@@ -11,17 +11,12 @@
           "open": true
         }
       },
-      "SPARK MAX [10]": {
+      "DutyCycleEncoder[0]": {
         "header": {
           "open": true
         }
       },
-      "SPARK MAX [12]": {
-        "header": {
-          "open": true
-        }
-      },
-      "navX-Sensor[0]": {
+      "DutyCycleEncoder[1]": {
         "header": {
           "open": true
         }
