@@ -102,8 +102,20 @@ public class Robot extends TimedRobot {
   // Intake Arm Speed
   private static final double intakeArmSpeed = 0.20;
 
-  // Define the position tolerance for the arm movement
-  private static final double intakePositionTolerance = 0.05;
+  // Intake Time
+  private static final double intakeTime = 5;
+
+  // Shooter Time
+  private static final double shooterTime = 5;
+
+  // Intake Arm Move to/from Intake Position and Speaker Position
+  private static final double armIntakeSpeakerPositionTime = 5;
+
+  // Intake Arm Move to/from Intake Position and Amp Position
+  private static final double armAmpIntakePositionTime = 2.5;
+
+  // Intake Arm Move to/from Speaker Position and Amp Position
+  private static final double armAmpSpeakerPositionTime = 2.5;
 
   // Define Controller Objects, we'll be associating these with controllers later
   private XboxController xboxMovementController;
@@ -128,11 +140,8 @@ public class Robot extends TimedRobot {
   private boolean isGamePieceLoaded;  
   
   // Variables related to intake pivoting arm
-  private PIDController pidController;
   private CANSparkMax intakeArm;
-  private boolean isMovingArm;
-  private double targetPosition;   
-
+  private int IntakeArmPosition = 0; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
   SlewRateLimiter filterX = new SlewRateLimiter(1); 
@@ -399,14 +408,6 @@ public class Robot extends TimedRobot {
       }
   }
 
-  private void timedShooter(double speed, double duration) {
-      // Starts shooter motors and schedules it to stop after a set duration
-      this.runShooter(speed); // Start the intake
-      isShooterRunning = true;
-      shooterStartTime = Timer.getFPGATimestamp(); // Current time
-      shooterDuration = duration;
-  }
-
     /**
    * Manages the robot's drive system, including motor initialization and driving
    * logic. Supports both field-centric and robot-centric control modes, handling
@@ -479,7 +480,6 @@ public class Robot extends TimedRobot {
     private void IntakeArmInit() {
       intakeArm = new CANSparkMax(intakeArmID, MotorType.kBrushless);        
       intakeArm.setInverted(false);
-      isMovingArm = false;
       intakeHexEncoder = new DutyCycleEncoder(intakeHexEncoderPWMChannel);
   }
 
@@ -515,6 +515,61 @@ public class Robot extends TimedRobot {
     }
   }
 
+  private void IntakeArmSpeakerPosition(){
+    /*
+     * Case 0 = Intake arm is at intake position
+     * Case 1 = Intake arm is at amp position
+     * Case 2 = Intake arm is in speaker position
+     */
+    switch(IntakeArmPosition) {
+      case 0:
+        timedIntakeArmUp(armIntakeSpeakerPositionTime);
+        break;
+      case 1:
+        timedIntakeArmUp(armAmpSpeakerPositionTime);
+        break;
+      default:
+        break;
+    }
+  }
+
+  private void IntakeArmAmpPosition(){
+
+     /*
+     * Case 0 = Intake arm is at intake position
+     * Case 1 = Intake arm is at amp position
+     * Case 2 = Intake arm is in speaker position
+     */
+    switch(IntakeArmPosition) {
+      case 0:
+        timedIntakeArmUp(armAmpIntakePositionTime);
+        break;
+      case 2:
+        timedIntakeArmDown(armAmpSpeakerPositionTime);
+        break;
+      default:
+        break;        
+    }
+  }
+
+  private void IntakeArmIntakePosition(){
+     /*
+     * Case 0 = Intake arm is at intake position
+     * Case 1 = Intake arm is at amp position
+     * Case 2 = Intake arm is in speaker position
+     */
+    switch(IntakeArmPosition) {
+      case 1:
+        timedIntakeArmUp(armAmpIntakePositionTime);
+        break;
+      case 2:
+        timedIntakeArmDown(armIntakeSpeakerPositionTime);
+        break;
+      default:
+        break;        
+    }
+  }
+
   private void timedIntakeArmUp(double duration) {
     intakeArmStartTime = Timer.getFPGATimestamp(); // Record start time for duration tracking
     isIntakeArmRunning = true; // Flag to track intake state
@@ -529,7 +584,7 @@ public class Robot extends TimedRobot {
     intakeArmDirection = false;
   }
 
-  private void timedIntakeArmPeriodic(){
+  private void IntakeArmPeriodic(){
     if ((intakeStartTime - Timer.getFPGATimestamp()) < intakeDuration) {        
       // Starts intake motors and schedules it to stop after a duration
       if (intakeArmDirection==true){
@@ -583,10 +638,21 @@ public class Robot extends TimedRobot {
 
     // Intake Arm Position
     if (xboxInteractionController.getAButtonPressed()) {
-      MoveIntakeArmUp(defaultMovementSpeed);
+      MoveIntakeArmUp(intakeArmSpeed);
     } else if (xboxInteractionController.getBButtonPressed()) {
-      MoveIntakeArmDown(defaultMovementSpeed);
+      MoveIntakeArmDown(intakeArmSpeed);
     } 
+
+    /* 
+    // Intake Arm Position
+    if (xboxInteractionController.getAButtonPressed()) {
+      IntakeArmSpeakerPosition();
+    } else if (xboxInteractionController.getBButtonPressed()) {
+      IntakeArmIntakePosition();
+    } else if (xboxInteractionController.getStartButtonPressed() {
+      IntakeArmAmpPosition();
+    }
+    */
 
     // Raising and Lowering Climber 
     if (xboxInteractionController.getYButtonPressed()) {
@@ -601,36 +667,11 @@ public class Robot extends TimedRobot {
 
   }
 
-  private void InteractionPeriodic() {    
-    IntakeArmPeriodic();
+  private void InteractionPeriodic() { 
     ShooterRollerPeriodic();
-    timedIntakeArmPeriodic();
+    IntakeRollerPeriodic();
+    IntakeArmPeriodic();
     GamePieceDetectionPeriodic();
-  }
-  
-  private void IntakeArmPeriodic() {
-    if (isMovingArm) {
-      // Calculate the control output using the PID controller
-      double output = pidController.calculate(intakeHexEncoder.get());
-
-      // Check if the arm is at or near the target position
-      if (Math.abs(intakeHexEncoder.get() - targetPosition) < Robot.intakePositionTolerance) {
-        intakeArm.set(0.0); // Stop the motor movement
-        isMovingArm = false; // Reset the flag
-        if (Robot.debug) {
-          // output value to smart dashboard
-          SmartDashboard.putNumber("Current Intake Arm Motor Value", 0);
-        }
-      } else {
-        pidController.setSetpoint(targetPosition);
-        intakeArm.set(output);
-        if (Robot.debug) {
-
-          // output value to smart dashboard
-          SmartDashboard.putNumber("Current Intake Arm Motor Value", output);
-        }
-      }
-    }
   }
 
   private void RobotStatePeriodic() {
@@ -800,12 +841,10 @@ public class Robot extends TimedRobot {
       {zAxisValue = filterZ.calculate(xboxInteractionController.getLeftX() * zModifier);
     }  
     
-    // Call the Peridoic Methods
+    // Call the Periodic Methods
     ButtonControllsPeriodic();
-    IntakeArmPeriodic();
     InteractionPeriodic();
     RobotStatePeriodic();
-    GamePieceDetectionPeriodic();
 
     // If debug mode is on, provide diagnostic information to the smart dashboard
     if (debug) {
