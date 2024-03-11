@@ -7,15 +7,35 @@ package frc.robot;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-
+import edu.wpi.first.math.geometry.Pose2d; //Represents a 2D pose containing translational and rotational elements
+import edu.wpi.first.math.geometry.Rotation2d; //Rotates the robot in the 2D Space
+import edu.wpi.first.math.geometry.Translation2d; //Translates the robot in the 2D Space
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
+import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
+import edu.wpi.first.math.kinematics.MecanumDriveKinematics; //Makes conversion from ChassisVelocity to WheelSpeeds 
+import edu.wpi.first.math.kinematics.MecanumDriveOdometry; //Allows the tracking of the robot's position on a field
+import edu.wpi.first.math.kinematics.MecanumDriveWheelPositions; // Holds each of the four wheel positions in EncoderCounts
+import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds; // Holds each of the four wheel speeds in RPM
+import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
+import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
+import edu.wpi.first.math.kinematics.SwerveModulePosition;
+import edu.wpi.first.math.kinematics.SwerveModuleState;
+import edu.wpi.first.math.kinematics.proto.ChassisSpeedsProto;
 import edu.wpi.first.math.system.plant.DCMotor;
+import edu.wpi.first.math.trajectory.Trajectory;
+import edu.wpi.first.math.trajectory.TrajectoryConfig;
+import edu.wpi.first.math.trajectory.TrajectoryGenerator;
+import edu.wpi.first.math.util.Units;
 
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
+import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
@@ -26,6 +46,13 @@ import com.kauailabs.navx.frc.AHRS;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVPhysicsSim;
+import com.revrobotics.RelativeEncoder;
+import com.revrobotics.CANSparkBase.IdleMode;
+
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.ArrayList; //Each path is stored in an index in an arraylist 
+import edu.wpi.first.math.controller.PIDController;
 
 
 /**
@@ -187,15 +214,17 @@ public class Robot extends TimedRobot {
   private int currentColor = redColor;
   private int nonOverrideState = redColor; // Variable to store the current non-override state
 
-  private double overrideTimer; // Timer for handling override states
+  private double overrideTimer;            // Timer for handling override states
 
   private int currentState;
   private int currentNonOverrideState;  
 
-  private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor; // Drive Motors
-  private CANSparkMax leftShooterRoller, rightShooterRoller, intakeRoller, leftClimber, rightClimber; // Interaction Motors
-  private boolean isIntakeRunning = false;
-  private double intakeStartTime = Timer.getFPGATimestamp();
+  private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;                           // Drive Motors
+  private RelativeEncoder leftFrontEncoder, leftBackEncoder, rightFrontEncoder, rightBackEncoder;               // Drive Motor Encoders
+  private Translation2d leftFrontTranslation, leftBackTranslation, rightFrontTranslation, rightBackTranslation; // Drive Motors Positions
+  private CANSparkMax leftShooterRoller, rightShooterRoller, intakeRoller, leftClimber, rightClimber;           // Interaction Motors
+  private boolean isIntakeRunning = false;                                                                      // Intake Running Tracker
+  private double intakeStartTime = Timer.getFPGATimestamp();                                                    // Start Time tracker
   private double intakeDuration = 0;
   private boolean isShooterRunning = false;
   private double shooterStartTime = 0;
@@ -204,6 +233,111 @@ public class Robot extends TimedRobot {
   private double intakeArmDuration = 0;
   private boolean isIntakeArmRunning = false;
   private boolean intakeArmDirection;
+  private double shooterSpinupTime = 1;
+
+  private MecanumDriveKinematics kinematics;
+  private MecanumDriveOdometry odometry;
+
+  // Locations of the wheels relative to the robot center.
+  private static final Translation2d flModuleOffset = new Translation2d(0.4, 0.4);
+  private static final Translation2d frModuleOffset = new Translation2d(0.4, -0.4);
+  private static final Translation2d blModuleOffset = new Translation2d(-0.4, 0.4);
+  private static final Translation2d brModuleOffset = new Translation2d(-0.4, -0.4);
+
+  private static final double maxModuleSpeed = 4.5; // M/S
+
+  private static final double kLinearDistanceConverter = 2 * Math.PI * Units.inchesToMeters(3) / 27;
+
+  private String trejectoryJSON = "paths/TestPath.wpilib.json";
+
+  Trajectory testTrajectory = new Trajectory();
+
+  // These are example values only - DO NOT USE THESE FOR YOUR OWN ROBOT!
+  // These characterization values MUST be determined either experimentally or theoretically
+  // for *your* robot's drive.
+  // The Robot Characterization Toolsuite provides a convenient tool for obtaining these
+  // values for your robot.
+  public static final double ksVolts = 0.22;
+  public static final double kvVoltSecondsPerMeter = 1.98;
+  public static final double kaVoltSecondsSquaredPerMeter = 0.2;
+
+  // Example value only - as above, this must be tuned for your drive!
+  public static final double kPDriveVel = 8.5;
+  
+  private void AutonMecanum() {
+    //Integrated Motor Encoders. One revolution of the motor is 42 encoder counts
+    RelativeEncoder leftFrontEncoder = leftFrontMotor.getEncoder();
+    RelativeEncoder rightFrontEncoder = rightFrontMotor.getEncoder();
+    RelativeEncoder leftBackEncoder = leftBackMotor.getEncoder();
+    RelativeEncoder rightBackEncoder = rightBackMotor.getEncoder();
+    kinematics = new MecanumDriveKinematics(
+      flModuleOffset, 
+      frModuleOffset, 
+      blModuleOffset, 
+      brModuleOffset
+    );
+    odometry = new MecanumDriveOdometry(kinematics, navx.getRotation2d(), getWheelPositions());
+  
+  }
+
+  private void AutonMecanumPeriodic() {
+    // Example chassis speeds: 1 meter per second forward, 3 meters
+    // per second to the left, and rotation at 1.5 radians per second
+    // counterclockwise.
+    ChassisSpeeds speeds = new ChassisSpeeds(1.0, 3.0, 1.5);
+
+    // Convert to wheel speeds
+    MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
+
+    // Update the odometry in the periodic block
+    odometry.update(navx.getRotation2d(), getWheelPositions());
+
+    // Get the individual wheel speeds
+    double frontLeft = wheelSpeeds.frontLeftMetersPerSecond;
+    double frontRight = wheelSpeeds.frontRightMetersPerSecond;
+    double backLeft = wheelSpeeds.rearLeftMetersPerSecond;
+    double backRight = wheelSpeeds.rearRightMetersPerSecond;
+
+    // Convert to chassis speeds
+    ChassisSpeeds chassisSpeeds = kinematics.toChassisSpeeds(wheelSpeeds);
+
+    // Getting individual speeds
+    double forward = chassisSpeeds.vxMetersPerSecond;
+    double sideways = chassisSpeeds.vyMetersPerSecond;
+    double angular = chassisSpeeds.omegaRadiansPerSecond;
+
+    DrivePerodic(false, forward, sideways, angular, navx);
+  }
+
+  public MecanumDriveWheelSpeeds getWheelSpeeds() {
+    return new MecanumDriveWheelSpeeds(
+      leftFrontEncoder.getVelocity(),
+      rightFrontEncoder.getVelocity(),
+      leftBackEncoder.getVelocity(),
+      rightBackEncoder.getVelocity()
+    );
+  }
+
+  public MecanumDriveWheelPositions getWheelPositions() {
+    return new MecanumDriveWheelPositions(
+        leftFrontEncoder.getPosition(), 
+        rightFrontEncoder.getPosition(),
+        leftBackEncoder.getPosition(), 
+        rightBackEncoder.getPosition()
+      );
+  }
+
+  public Pose2d getPose() {
+    return odometry.getPoseMeters();
+  }
+
+  //Reset encoders to zero
+  public void resetEncoders() {
+    leftFrontEncoder.setPosition(0);
+    rightFrontEncoder.setPosition(0);
+    leftBackEncoder.setPosition(0);
+    rightBackEncoder.setPosition(0);
+  }
 
   private void SetLEDColor() {
     switch (currentColor) {
@@ -319,6 +453,9 @@ public class Robot extends TimedRobot {
     leftShooterRoller.setInverted(true); 
     rightShooterRoller.setInverted(false);
     intakeRoller.setInverted(false);
+
+    leftClimber.setIdleMode(IdleMode.kBrake);
+    rightClimber.setIdleMode(IdleMode.kBrake);
   }
 
   private void runIntake(double speed) {
@@ -365,11 +502,13 @@ public class Robot extends TimedRobot {
     }
   }
 
-  private void runShooter(double speed) {
+  private void runShooter(double speed, boolean spinup) {
         // Sets shooter motor speeds; positive for shooting, negative could reverse feed
       SetState(5);
-      leftShooterRoller.set(speed);
-      rightShooterRoller.set(speed);
+      if (spinup == false) {
+        leftShooterRoller.set(speed);
+        rightShooterRoller.set(speed);
+      }
       runIntake(-speed);
       if (debug) {
 
@@ -401,10 +540,14 @@ public class Robot extends TimedRobot {
   }
 
   private void ShooterRollerPeriodic(){
-    if ((Timer.getFPGATimestamp() - shooterStartTime) < shooterDuration) {        
-      // Starts intake motors and schedules it to stop after a duration
-      runShooter(shooterSpeed); // Start the intake
-      isShooterRunning = true; // Flag to track intake state
+    if ((Timer.getFPGATimestamp() - shooterStartTime) < shooterDuration) {  
+      if ((Timer.getFPGATimestamp() - shooterStartTime) > shooterSpinupTime){     //  We want to give the shooter time to spin up 
+        // Starts intake motors and schedules it to stop after a duration
+        runShooter(shooterSpeed, false); // Start the intake
+        isShooterRunning = true; // Flag to track intake state
+      } else {
+        runShooter(shooterSpeed, true);
+      }
     } else {
       stopShooter();
       isShooterRunning = false;
@@ -435,7 +578,7 @@ public class Robot extends TimedRobot {
 
   private void StopClimbers(){
       leftClimber.set(0);
-      rightClimber.set(0);
+      rightClimber.set(0);      
       if (debug) {
 
           // output value to smart dashboard
@@ -800,6 +943,13 @@ public class Robot extends TimedRobot {
   public void autonomousInit() {
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (debug) { System.out.println("Entering autonomousInit Phase");}
+    AutonMecanum();    
+  }
+
+   @Override
+  public void autonomousPeriodic() {
+    AutonMecanumPeriodic();
+    
   }
 
   /** This function is called once when teleop is enabled. */
