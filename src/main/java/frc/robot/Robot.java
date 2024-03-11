@@ -7,6 +7,7 @@ package frc.robot;
 
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.filter.SlewRateLimiter;
+
 import edu.wpi.first.math.system.plant.DCMotor;
 
 import edu.wpi.first.wpilibj.DigitalInput;
@@ -53,16 +54,16 @@ public class Robot extends TimedRobot {
   */
 
   // CAN ID values for devices attached to CAN bus
-  private static final int leftFrontMotorID = 10;
-  private static final int leftBackMotorID = 11;
-  private static final int rightFrontMotorID = 12;
-  private static final int rightBackMotorID = 13;
-  private static final int leftShooterRollerID = 20;
-  private static final int rightShooterRollerID = 21;
-  private static final int intakeArmID = 30;
-  private static final int intakeRollerID = 31;
-  private static final int leftClimberMotorID = 40;
-  private static final int rightClimberMotorID = 41;
+  private static final int leftFrontMotorCANID = 10;
+  private static final int leftBackMotorCANID = 11;
+  private static final int rightFrontMotorCANID = 12;
+  private static final int rightBackMotorCANID = 13;
+  private static final int leftShooterRollerMotorCANID = 20;
+  private static final int rightShooterRollerMotorCANID = 21;
+  private static final int intakeArmPivitMotorCANID = 30;
+  private static final int intakeRollerMotorCANID = 31;
+  private static final int leftClimberMotorCANID = 40;
+  private static final int rightClimberMotorCANID = 41;
 
   /**
   * PWM Mapping:
@@ -144,9 +145,9 @@ public class Robot extends TimedRobot {
   private int IntakeArmPosition = 0; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
-  SlewRateLimiter filterX = new SlewRateLimiter(1); 
-  SlewRateLimiter filterY = new SlewRateLimiter(1);
-  SlewRateLimiter filterZ = new SlewRateLimiter(1);
+  SlewRateLimiter filterX = new SlewRateLimiter(2); 
+  SlewRateLimiter filterY = new SlewRateLimiter(2);
+  SlewRateLimiter filterZ = new SlewRateLimiter(2);
 
   // Create Duty Cycle encoder object for the through bore enocder
   private DutyCycleEncoder intakeHexEncoder;
@@ -183,10 +184,10 @@ public class Robot extends TimedRobot {
 
   private PWMSparkMax blinkinLED = new PWMSparkMax(Robot.blinkinPWMChannel);
 
-  private int currentColor = defaultColor;
-  private int nonOverrideState = defaultColor; // Variable to store the current non-override state
+  private int currentColor = redColor;
+  private int nonOverrideState = redColor; // Variable to store the current non-override state
 
-  private Timer overrideTimer = new Timer(); // Timer for handling override states
+  private double overrideTimer; // Timer for handling override states
 
   private int currentState;
   private int currentNonOverrideState;  
@@ -194,7 +195,7 @@ public class Robot extends TimedRobot {
   private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor; // Drive Motors
   private CANSparkMax leftShooterRoller, rightShooterRoller, intakeRoller, leftClimber, rightClimber; // Interaction Motors
   private boolean isIntakeRunning = false;
-  private double intakeStartTime = 0;
+  private double intakeStartTime = Timer.getFPGATimestamp();
   private double intakeDuration = 0;
   private boolean isShooterRunning = false;
   private double shooterStartTime = 0;
@@ -204,7 +205,7 @@ public class Robot extends TimedRobot {
   private boolean isIntakeArmRunning = false;
   private boolean intakeArmDirection;
 
-  private void setLEDColor() {
+  private void SetLEDColor() {
     switch (currentColor) {
         case redColor:
             blinkinLED.set(ledRed);
@@ -228,7 +229,11 @@ public class Robot extends TimedRobot {
   }
 
   // Method to handle state transitions and overrides
-  private void setState(int desiredState) {
+  /**
+  * Controls the robot's movement based on joystick input and control mode.
+  * @param desiredState Intager that reresents current robot state. 1=no piece loaded, 2=piece loaded, 3=informational state, 4=Attempting Pickup, 5=Attempting Shooter
+  */
+  private void SetState(int desiredState) {
     currentState = desiredState;
     switch (desiredState) {
         case 1:
@@ -257,15 +262,44 @@ public class Robot extends TimedRobot {
   private void overrideState(int color) {
     // Override current state with a specific color for a duration
     currentColor = color;
-    overrideTimer.reset();
-    overrideTimer.start();
+    overrideTimer = Timer.getFPGATimestamp();
   }
 
   private void clearOverrideState() {
     currentState = currentNonOverrideState;
-    currentColor = defaultColor; // Reset LED state to default color
-    overrideTimer.stop(); // Stop the override timer
+    overrideTimer = 0;
+  } 
+
+  private void RobotStatePeriodic() {
+
+    // Update LED state based on timers and non-override state
+    if ((Timer.getFPGATimestamp() - overrideTimer) < 1) {
+        // If override timer has elapsed, revert to non-override state
+        currentColor = nonOverrideState;
+    }   
+
+    if (isGamePieceLoaded == true) {
+      nonOverrideState = greenColor;
+    } else {
+      nonOverrideState = redColor;
+    }
+
+    SetLEDColor(); // Update LED color
+
+    if (debug) {
+
+        // Output Motor Values to Smart Dashboard for troubleshooting
+        SmartDashboard.putNumber("Robot LED State",currentColor);
+        SmartDashboard.putNumber("Robot LED PWM", blinkinLED.get());
+    }
+
   }
+    /**
+   * Manages the robot's drive system, including motor initialization and driving
+   * logic. Supports both field-centric and robot-centric control modes, handling
+   * input processing and motor speed calculations to facilitate smooth and
+   * responsive movement.
+   */
 
     /**
    * Controls interaction mechanisms like intakes and shooters, offering methods
@@ -274,40 +308,40 @@ public class Robot extends TimedRobot {
   
 
   private void InteractionSystemInit() {
-      // Initializes motors for intake and shooter systems as brushless motors
-      leftShooterRoller = new CANSparkMax(leftShooterRollerID, MotorType.kBrushless);
-      rightShooterRoller = new CANSparkMax(rightShooterRollerID, MotorType.kBrushless);
-      intakeRoller = new CANSparkMax(intakeRollerID, MotorType.kBrushless);
-      leftClimber = new CANSparkMax(leftClimberMotorID, MotorType.kBrushless);
-      rightClimber = new CANSparkMax(rightClimberMotorID, MotorType.kBrushless);
+    // Initializes motors for intake and shooter systems as brushless motors
+    leftShooterRoller = new CANSparkMax(leftShooterRollerMotorCANID, MotorType.kBrushless);
+    rightShooterRoller = new CANSparkMax(rightShooterRollerMotorCANID, MotorType.kBrushless);
+    intakeRoller = new CANSparkMax(intakeRollerMotorCANID, MotorType.kBrushless);
+    leftClimber = new CANSparkMax(leftClimberMotorCANID, MotorType.kBrushless);
+    rightClimber = new CANSparkMax(rightClimberMotorCANID, MotorType.kBrushless);
 
-      // Configure initial motor settings (e.g., inversion)      
-      leftShooterRoller.setInverted(true); 
-      rightShooterRoller.setInverted(false);
-      intakeRoller.setInverted(false);
+    // Configure initial motor settings (e.g., inversion)      
+    leftShooterRoller.setInverted(true); 
+    rightShooterRoller.setInverted(false);
+    intakeRoller.setInverted(false);
   }
 
   private void runIntake(double speed) {
-      // Sets intake motor speeds; positive values intake, negative values expel
-      setState(4);
-      intakeRoller.set(speed);
-      System.out.println(speed);
-      if (debug) {
+    // Sets intake motor speeds; positive values intake, negative values expel
+    SetState(4);
+    intakeRoller.set(speed);
+    if (debug) {
 
-          // output value to smart dashboard
-          SmartDashboard.putNumber("Current Intake Roller Motor Value", intakeRoller.getAppliedOutput());
-      }
+        // output value to smart dashboard
+        SmartDashboard.putNumber("Current Intake Roller Motor Value", intakeRoller.getAppliedOutput());
+    }
   }
 
   private void stopIntake() {
       // Stops the intake motors
       intakeRoller.set(0);
+      clearOverrideState();         
+      isIntakeRunning = false;   
       if (debug) {
 
           // output value to smart dashboard
           SmartDashboard.putNumber("Current Intake Roller Motor Value", intakeRoller.getAppliedOutput());
       }
-      clearOverrideState();
   }
 
   private void timedIntake(double duration) {
@@ -317,25 +351,26 @@ public class Robot extends TimedRobot {
   }
 
   private void IntakeRollerPeriodic(){
-    if (isGamePieceLoaded == true){
-      stopIntake();
-      isIntakeRunning = false;
-    } else if ((intakeStartTime - Timer.getFPGATimestamp()) < intakeDuration) {        
-      // Starts intake motors and schedules it to stop after a duration
-      runIntake(intakeSpeed); // Start the intake
-      isIntakeRunning = true; // Flag to track intake state
-    } else {
-      stopIntake();
-      isIntakeRunning = false;
+    if (isShooterRunning == false) {
+      if (isGamePieceLoaded == true){
+        intakeStartTime = 0;
+      }
+      if ((Timer.getFPGATimestamp() - intakeStartTime) < intakeDuration) {        
+        // Starts intake motors and schedules it to stop after a duration
+        runIntake(intakeSpeed); // Start the intake
+        isIntakeRunning = true; // Flag to track intake state
+      } else {
+        stopIntake();
+      }    
     }
   }
 
   private void runShooter(double speed) {
         // Sets shooter motor speeds; positive for shooting, negative could reverse feed
-      setState(5);
+      SetState(5);
       leftShooterRoller.set(speed);
       rightShooterRoller.set(speed);
-      intakeRoller.set(-speed);
+      runIntake(-speed);
       if (debug) {
 
           // output value to smart dashboard
@@ -349,7 +384,8 @@ public class Robot extends TimedRobot {
       clearOverrideState();
       leftShooterRoller.set(0);
       rightShooterRoller.set(0);
-      intakeRoller.set(0);
+      intakeRoller.set(0);      
+      isShooterRunning = false;
       if (debug) {
 
           // output value to smart dashboard
@@ -358,14 +394,14 @@ public class Robot extends TimedRobot {
       }
   }
 
-  private void timedShooter(double duration) {
+  private void TimedShooter(double duration) {
     shooterStartTime = Timer.getFPGATimestamp(); // Record start time for duration tracking
     isShooterRunning = true; // Flag to track intake state
     shooterDuration = duration;
   }
 
   private void ShooterRollerPeriodic(){
-    if ((shooterStartTime - Timer.getFPGATimestamp()) < shooterDuration) {        
+    if ((Timer.getFPGATimestamp() - shooterStartTime) < shooterDuration) {        
       // Starts intake motors and schedules it to stop after a duration
       runShooter(shooterSpeed); // Start the intake
       isShooterRunning = true; // Flag to track intake state
@@ -409,76 +445,11 @@ public class Robot extends TimedRobot {
   }
 
     /**
-   * Manages the robot's drive system, including motor initialization and driving
-   * logic. Supports both field-centric and robot-centric control modes, handling
-   * input processing and motor speed calculations to facilitate smooth and
-   * responsive movement.
-   */
-
-  private void DriveTrainInit() {
-      // Initialize each motor with its respective ID from Constants and set them as brushless
-      leftFrontMotor = new CANSparkMax(Robot.leftFrontMotorID, MotorType.kBrushless);
-      leftBackMotor = new CANSparkMax(Robot.leftBackMotorID, MotorType.kBrushless);
-      rightFrontMotor = new CANSparkMax(Robot.rightFrontMotorID, MotorType.kBrushless);
-      rightBackMotor = new CANSparkMax(Robot.rightBackMotorID, MotorType.kBrushless);
-      leftFrontMotor.setInverted(false);
-      leftBackMotor.setInverted(false);
-      rightFrontMotor.setInverted(true);
-      rightBackMotor.setInverted(true);
-  }
-
-  /**
-  * Controls the robot's movement based on joystick input and control mode.
-  * @param fieldCentricControl Determines if movement is relative to the field or robot.
-  * @param yAxisValue Forward/reverse input.
-  * @param xAxisValue Left/right input.
-  * @param zAxisValue Rotation input.
-  * @param ahrs The robot's gyroscope sensor for orientation.
-  * @param debug Enables diagnostic output to SmartDashboard.
-  */
-  private void DrivePerodic(boolean fieldCentricControl,double yAxisValue, double xAxisValue, double zAxisValue, AHRS ahrs, boolean debug) {
-      
-      if (fieldCentricControl){
-          // Drive System Code from https://gm0.org/en/latest/docs/software/tutorials/mecanum-drive.html
-
-          // Calculate movement based on robot orientation for field-centric control
-          double botHeading = ahrs.getRotation2d().getRadians();
-          double rotX = xAxisValue * Math.cos(-botHeading) - yAxisValue * Math.sin(-botHeading);
-          double rotY = xAxisValue * Math.sin(-botHeading) + yAxisValue * Math.cos(-botHeading);
-          double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(zAxisValue), 1);
-          leftFrontMotor.set((rotY + rotX + zAxisValue) / denominator);
-          leftBackMotor.set((rotY - rotX + zAxisValue) / denominator);
-          rightFrontMotor.set((rotY - rotX - zAxisValue) / denominator);
-          rightBackMotor.set((rotY + rotX - zAxisValue)  / denominator);
-
-      } else{
-          // Directly apply input for robot-centric control
-          double denominator = Math.max(Math.abs(yAxisValue) + Math.abs(xAxisValue) + Math.abs(zAxisValue), 1);
-          leftFrontMotor.set((yAxisValue + xAxisValue + zAxisValue) / denominator);
-          leftBackMotor.set((yAxisValue - xAxisValue + zAxisValue) / denominator);
-          rightFrontMotor.set((yAxisValue - xAxisValue - zAxisValue) / denominator);
-          rightBackMotor.set((yAxisValue + xAxisValue - zAxisValue)  / denominator);
-
-      }
-
-      // if debug mode is on, provide diagnostic data to the smart dashboard
-      if (debug) {
-
-          // Output Motor Values to Smart Dashboard for troubleshooting
-          SmartDashboard.putNumber("Left Front Motor Power", leftFrontMotor.getAppliedOutput());
-          SmartDashboard.putNumber("Left Back Motor Power", leftBackMotor.getAppliedOutput());
-          SmartDashboard.putNumber("Right Front Motor Power", rightFrontMotor.getAppliedOutput());
-          SmartDashboard.putNumber("Right Back Motor Power", rightBackMotor.getAppliedOutput());
-
-      }
-  }
-
-    /**
   * Initializes and updates the robot's component simulations for development and testing.
     */
     // Constructor
     private void IntakeArmInit() {
-      intakeArm = new CANSparkMax(intakeArmID, MotorType.kBrushless);        
+      intakeArm = new CANSparkMax(intakeArmPivitMotorCANID, MotorType.kBrushless);        
       intakeArm.setInverted(false);
       intakeHexEncoder = new DutyCycleEncoder(intakeHexEncoderPWMChannel);
   }
@@ -531,6 +502,7 @@ public class Robot extends TimedRobot {
       default:
         break;
     }
+    IntakeArmPosition = 2;
   }
 
   private void IntakeArmAmpPosition(){
@@ -550,6 +522,7 @@ public class Robot extends TimedRobot {
       default:
         break;        
     }
+    IntakeArmPosition = 1;
   }
 
   private void IntakeArmIntakePosition(){
@@ -568,6 +541,7 @@ public class Robot extends TimedRobot {
       default:
         break;        
     }
+    IntakeArmPosition = 0;
   }
 
   private void timedIntakeArmUp(double duration) {
@@ -585,7 +559,7 @@ public class Robot extends TimedRobot {
   }
 
   private void IntakeArmPeriodic(){
-    if ((intakeStartTime - Timer.getFPGATimestamp()) < intakeDuration) {        
+    if ((Timer.getFPGATimestamp() - intakeArmStartTime) < intakeArmDuration) {        
       // Starts intake motors and schedules it to stop after a duration
       if (intakeArmDirection==true){
         MoveIntakeArmUp(intakeArmSpeed); // Start the intake
@@ -598,10 +572,30 @@ public class Robot extends TimedRobot {
       StopIntakeArm();
       isIntakeRunning = false;
     }
+    if (debug) {
+
+      // Output Motor Values to Smart Dashboard for troubleshooting
+      String intakearmPositionName;
+      switch (IntakeArmPosition) {
+        case 1:
+          intakearmPositionName = "Amp";
+          break;
+        case 2:
+          intakearmPositionName = "Speaker";
+          break;
+        default:
+          intakearmPositionName = "Intake";
+          break;
+      }
+      SmartDashboard.putString("Intake Arm Position", intakearmPositionName);
+    }
   }
 
   private void GamePieceDetectionPeriodic() {
-      isGamePieceLoaded = gamePieceDetectionSwitch.get();  // Pulls the value returned fromt he Game Piece Detection Switch and sets it to isGamePieceLoaded variable
+    isGamePieceLoaded = gamePieceDetectionSwitch.get();  // Pulls the value returned fromt he Game Piece Detection Switch and sets it to isGamePieceLoaded variable
+    if (debug) {
+      SmartDashboard.putBoolean("Gamepiece Limit Switch", isGamePieceLoaded);
+    }
   }
 
   private void ButtonControllsPeriodic() {
@@ -617,42 +611,43 @@ public class Robot extends TimedRobot {
     }
 
     // If Right Trigger is pressed on the interaction controller, run the shooter
-    if (xboxInteractionController.getRightBumperPressed()) {
+    if (xboxInteractionController.getRightTriggerAxis() > 0.2) {
       if (debug) {
         System.out.println("Start Shooter");
       }
-      runShooter(shooterSpeed); // Adjust shooterSpeed to your desired speed
-    } else if (xboxInteractionController.getRightBumperReleased()) {
-      stopShooter();
+      TimedShooter(5); // Adjust shooterSpeed to your desired speed
     }
 
     // If Left Trigger is pressed on the interaction controller, run the intake
-    if (xboxInteractionController.getLeftBumperPressed()) {
+    if (xboxInteractionController.getLeftTriggerAxis() > 0.2) {
       if (debug) {
         System.out.println("Start Intake");
       }
-      runIntake(intakeSpeed); // Adjust intakeSpeed to your desired speed
-    } else if (xboxInteractionController.getLeftBumperReleased()) {
-      stopIntake();
+      timedIntake(5); // Adjust intakeSpeed to your desired speed
     }
 
+    /* 
     // Intake Arm Position
     if (xboxInteractionController.getAButtonPressed()) {
       MoveIntakeArmUp(intakeArmSpeed);
-    } else if (xboxInteractionController.getBButtonPressed()) {
+    } else if (xboxInteractionController.getAButtonReleased()){
+      StopIntakeArm();
+    }
+    if (xboxInteractionController.getBButtonPressed()) {
       MoveIntakeArmDown(intakeArmSpeed);
-    } 
+    } else if (xboxInteractionController.getBButtonReleased()){
+      StopIntakeArm();
+    }
+    */
 
-    /* 
     // Intake Arm Position
     if (xboxInteractionController.getAButtonPressed()) {
       IntakeArmSpeakerPosition();
     } else if (xboxInteractionController.getBButtonPressed()) {
       IntakeArmIntakePosition();
-    } else if (xboxInteractionController.getStartButtonPressed() {
+    } else if (xboxInteractionController.getStartButtonPressed()) {
       IntakeArmAmpPosition();
     }
-    */
 
     // Raising and Lowering Climber 
     if (xboxInteractionController.getYButtonPressed()) {
@@ -672,16 +667,69 @@ public class Robot extends TimedRobot {
     IntakeRollerPeriodic();
     IntakeArmPeriodic();
     GamePieceDetectionPeriodic();
+    if (debug) {
+
+        // Output Motor Values to Smart Dashboard for troubleshooting
+        SmartDashboard.putNumber("Current Timer Value",Timer.getFPGATimestamp());
+    }
   }
 
-  private void RobotStatePeriodic() {
+  private void DriveTrainInit() {
+      // Initialize each motor with its respective ID from Constants and set them as brushless
+      leftFrontMotor = new CANSparkMax(Robot.leftFrontMotorCANID, MotorType.kBrushless);
+      leftBackMotor = new CANSparkMax(Robot.leftBackMotorCANID, MotorType.kBrushless);
+      rightFrontMotor = new CANSparkMax(Robot.rightFrontMotorCANID, MotorType.kBrushless);
+      rightBackMotor = new CANSparkMax(Robot.rightBackMotorCANID, MotorType.kBrushless);
+      leftFrontMotor.setInverted(false);
+      leftBackMotor.setInverted(false);
+      rightFrontMotor.setInverted(true);
+      rightBackMotor.setInverted(true);
+  }
 
-    // Update LED state based on timers and non-override state
-    if (overrideTimer.hasElapsed(1.0)) {
-        // If override timer has elapsed, revert to non-override state
-        currentColor = nonOverrideState;
-    }
-    setLEDColor(); // Update LED color
+  /**
+  * Controls the robot's movement based on joystick input and control mode.
+  * @param fieldCentricControl Determines if movement is relative to the field or robot.
+  * @param yAxisValue Forward/reverse input.
+  * @param xAxisValue Left/right input.
+  * @param zAxisValue Rotation input.
+  * @param ahrs The robot's gyroscope sensor for orientation.
+  * @param debug Enables diagnostic output to SmartDashboard.
+  */
+  private void DrivePerodic(boolean fieldCentricControl,double yAxisValue, double xAxisValue, double zAxisValue, AHRS ahrs) {
+      
+      if (fieldCentricControl){
+          // Drive System Code from https://gm0.org/en/latest/docs/software/tutorials/mecanum-drive.html
+
+          // Calculate movement based on robot orientation for field-centric control
+          double botHeading = ahrs.getRotation2d().getRadians();
+          double rotX = xAxisValue * Math.cos(-botHeading) - yAxisValue * Math.sin(-botHeading);
+          double rotY = xAxisValue * Math.sin(-botHeading) + yAxisValue * Math.cos(-botHeading);
+          double denominator = Math.max(Math.abs(rotY) + Math.abs(rotX) + Math.abs(zAxisValue), 1);
+          leftFrontMotor.set((rotY + rotX + zAxisValue) / denominator);
+          leftBackMotor.set((rotY - rotX + zAxisValue) / denominator);
+          rightFrontMotor.set((rotY - rotX - zAxisValue) / denominator);
+          rightBackMotor.set((rotY + rotX - zAxisValue)  / denominator);
+
+      } else{
+          // Directly apply input for robot-centric control
+          double denominator = Math.max(Math.abs(yAxisValue) + Math.abs(xAxisValue) + Math.abs(zAxisValue), 1);
+          leftFrontMotor.set((yAxisValue + xAxisValue + zAxisValue) / denominator);
+          leftBackMotor.set((yAxisValue - xAxisValue + zAxisValue) / denominator);
+          rightFrontMotor.set((yAxisValue - xAxisValue - zAxisValue) / denominator);
+          rightBackMotor.set((yAxisValue + xAxisValue - zAxisValue)  / denominator);
+
+      }
+
+      // if debug mode is on, provide diagnostic data to the smart dashboard
+      if (debug) {
+
+          // Output Motor Values to Smart Dashboard for troubleshooting
+          SmartDashboard.putNumber("Left Front Motor Power", leftFrontMotor.getAppliedOutput());
+          SmartDashboard.putNumber("Left Back Motor Power", leftBackMotor.getAppliedOutput());
+          SmartDashboard.putNumber("Right Front Motor Power", rightFrontMotor.getAppliedOutput());
+          SmartDashboard.putNumber("Right Back Motor Power", rightBackMotor.getAppliedOutput());
+
+      }
   }
 
   /**
@@ -698,8 +746,6 @@ public class Robot extends TimedRobot {
     DriveTrainInit();
     InteractionSystemInit();
     IntakeArmInit();
-
-    intakeHexEncoder = new DutyCycleEncoder(0);
 
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
@@ -806,8 +852,8 @@ public class Robot extends TimedRobot {
      */
 
     if (isGamePieceLoaded == true){
-      setState(2);
-    } else {setState(1);}
+      SetState(2);
+    } else {SetState(1);}
 
     if (xboxMovementController.getRightBumperPressed()){
 
@@ -860,7 +906,7 @@ public class Robot extends TimedRobot {
 
     }
 
-    DrivePerodic(fieldCentricControl, yAxisValue, xAxisValue, zAxisValue, navx, debug);
+    DrivePerodic(fieldCentricControl, yAxisValue, xAxisValue, zAxisValue, navx);
   }
 
   /** This function is called once when the robot is disabled. */
@@ -913,7 +959,7 @@ public class Robot extends TimedRobot {
     SmartDashboard.putNumber("Simluated Right Front Motor Power", rightFrontMotor.get());
     SmartDashboard.putNumber("Simluated Right Back Motor Power", rightBackMotor.get());
     SmartDashboard.putNumber("Simluated Left Shooter Roller Motor Power", leftShooterRoller.get());
-    SmartDashboard.putNumber("Simluated Left Shooter Roller Motor Power", rightShooterRoller.get());
+    SmartDashboard.putNumber("Simluated Right Shooter Roller Motor Power", rightShooterRoller.get());
     SmartDashboard.putNumber("Simluated Intake Roller Motor Power", intakeRoller.get());
     SmartDashboard.putNumber("Simluated Left Climber Motor Power", leftClimber.get());
     SmartDashboard.putNumber("Simluated Right Climber Motor Power", rightClimber.get());
