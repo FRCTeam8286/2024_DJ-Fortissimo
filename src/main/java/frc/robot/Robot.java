@@ -94,13 +94,13 @@ public class Robot extends TimedRobot {
 
   /**
   * PWM Mapping:
-  * - Blinkin LED Controller: PWM 0
-  * - Intake Hex Encoder (Through Bore): PWM 1
+  * - Blinkin LED Controller: PWM 1
+  * - Intake Hex Encoder (Through Bore): PWM 2
   */
 
   // PWM Channels
-  private static final int blinkinPWMChannel = 0;
-  private static final int intakeHexEncoderPWMChannel = 1;
+  private static final int blinkinPWMChannel = 1;
+  private static final int intakeHexEncoderPWMChannel = 2;
 
   // DIO Channels
   private static final int gamePieceDetectionSwitchDIOChannel = 0;
@@ -119,10 +119,10 @@ public class Robot extends TimedRobot {
   private static final double defaultMovementSpeed = 0.5;
 
   // Shooter Speed Variable
-  private static final double shooterSpeed = 0.25;
+  private static final double shooterSpeed = 0.65;
 
   // Intake Speed Variable
-  private static final double intakeSpeed = 0.25;
+  private static final double intakeSpeed = 0.35;
 
   // Climber Speeds
   private static final double climberSpeed = 0.20;
@@ -137,13 +137,13 @@ public class Robot extends TimedRobot {
   private static final double shooterTime = 5;
 
   // Intake Arm Move to/from Intake Position and Speaker Position
-  private static final double armIntakeSpeakerPositionTime = 5;
+  private static final double armIntakeSpeakerPositionTime = 2;
 
   // Intake Arm Move to/from Intake Position and Amp Position
-  private static final double armAmpIntakePositionTime = 2.5;
+  private static final double armAmpIntakePositionTime = 0.5;
 
   // Intake Arm Move to/from Speaker Position and Amp Position
-  private static final double armAmpSpeakerPositionTime = 2.5;
+  private static final double armAmpSpeakerPositionTime = 0.5;
 
   // Define Controller Objects, we'll be associating these with controllers later
   private XboxController xboxMovementController;
@@ -169,7 +169,7 @@ public class Robot extends TimedRobot {
   
   // Variables related to intake pivoting arm
   private CANSparkMax intakeArm;
-  private int IntakeArmPosition = 0; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
+  private int IntakeArmPosition = 2; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
   SlewRateLimiter filterX = new SlewRateLimiter(2); 
@@ -453,7 +453,8 @@ public class Robot extends TimedRobot {
     leftShooterRoller.setInverted(true); 
     rightShooterRoller.setInverted(false);
     intakeRoller.setInverted(false);
-
+    
+    intakeRoller.setIdleMode(IdleMode.kBrake);
     leftClimber.setIdleMode(IdleMode.kBrake);
     rightClimber.setIdleMode(IdleMode.kBrake);
   }
@@ -504,12 +505,12 @@ public class Robot extends TimedRobot {
 
   private void runShooter(double speed, boolean spinup) {
         // Sets shooter motor speeds; positive for shooting, negative could reverse feed
-      SetState(5);
+      SetState(5);      
+      leftShooterRoller.set(speed);
+      rightShooterRoller.set(speed);
       if (spinup == false) {
-        leftShooterRoller.set(speed);
-        rightShooterRoller.set(speed);
+        runIntake(-speed);
       }
-      runIntake(-speed);
       if (debug) {
 
           // output value to smart dashboard
@@ -643,6 +644,7 @@ public class Robot extends TimedRobot {
         timedIntakeArmUp(armAmpSpeakerPositionTime);
         break;
       default:
+        timedIntakeArmUp(armIntakeSpeakerPositionTime);
         break;
     }
     IntakeArmPosition = 2;
@@ -676,12 +678,13 @@ public class Robot extends TimedRobot {
      */
     switch(IntakeArmPosition) {
       case 1:
-        timedIntakeArmUp(armAmpIntakePositionTime);
+        timedIntakeArmDown(armAmpIntakePositionTime);
         break;
       case 2:
         timedIntakeArmDown(armIntakeSpeakerPositionTime);
         break;
       default:
+        timedIntakeArmDown(armIntakeSpeakerPositionTime);
         break;        
     }
     IntakeArmPosition = 0;
@@ -735,7 +738,7 @@ public class Robot extends TimedRobot {
   }
 
   private void GamePieceDetectionPeriodic() {
-    isGamePieceLoaded = gamePieceDetectionSwitch.get();  // Pulls the value returned fromt he Game Piece Detection Switch and sets it to isGamePieceLoaded variable
+    isGamePieceLoaded = !gamePieceDetectionSwitch.get();  // Pulls the value returned fromt he Game Piece Detection Switch and sets it to isGamePieceLoaded variable
     if (debug) {
       SmartDashboard.putBoolean("Gamepiece Limit Switch", isGamePieceLoaded);
     }
@@ -758,7 +761,7 @@ public class Robot extends TimedRobot {
       if (debug) {
         System.out.println("Start Shooter");
       }
-      TimedShooter(5); // Adjust shooterSpeed to your desired speed
+      TimedShooter(3); // Adjust shooterSpeed to your desired speed
     }
 
     // If Left Trigger is pressed on the interaction controller, run the intake
@@ -986,17 +989,17 @@ public class Robot extends TimedRobot {
      * - XboxMovementController (Port 0):
      *   - Left Y Axis: Drive forward/reverse
      *   - Left X Axis: Strafe left/right
+     *   - Right X Axis: Rotate
      *   - Start Button: Calibrate Ahrs
-     *   - Y Button: Toggle Field Centric
      *   - Right Bumper: Increase movement speed
      *   - Left Bumper: Decrease movement speed
      *
      * - XboxInteractionController (Port 1):
-     *   - Left X Axis: Rotate
-     *   - Left Bumper: Run Intake
-     *   - Right Bumper: Run Shooter
-     *   - A Button: Move Intake Arm Up
-     *   - B Button: Move intake Arm Back
+     *   - Left Trig: Run Intake
+     *   - Right Trig: Run Shooter
+     *   - A Button: Intake Position Speaker
+     *   - B Button: Intake Position Intake
+     *   - Start BUtton: Intake Position Amp
      *   - Y Button: Raise Climbers
      *   - X Button: Lower Climbers
      */
@@ -1033,8 +1036,8 @@ public class Robot extends TimedRobot {
       xAxisValue = filterX.calculate(xboxMovementController.getLeftX() * movementSpeed * xModifier); 
     }    
 
-    if (Math.abs(xboxInteractionController.getLeftX()) > zDeadZone) // zAxis changes based on if we have two controllers (operators) or not
-      {zAxisValue = filterZ.calculate(xboxInteractionController.getLeftX() * zModifier);
+    if (Math.abs(xboxMovementController.getRightX()) > zDeadZone) // zAxis changes based on if we have two controllers (operators) or not
+      {zAxisValue = filterZ.calculate(xboxMovementController.getRightX() * zModifier);
     }  
     
     // Call the Periodic Methods
