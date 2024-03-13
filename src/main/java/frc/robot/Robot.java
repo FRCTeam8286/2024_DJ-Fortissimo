@@ -6,26 +6,24 @@ package frc.robot;
 
 
 import edu.wpi.first.math.controller.PIDController;
+import edu.wpi.first.math.controller.RamseteController;
+import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.geometry.Pose2d; //Represents a 2D pose containing translational and rotational elements
 import edu.wpi.first.math.geometry.Rotation2d; //Rotates the robot in the 2D Space
 import edu.wpi.first.math.geometry.Translation2d; //Translates the robot in the 2D Space
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.kinematics.DifferentialDriveWheelSpeeds;
 import edu.wpi.first.math.kinematics.MecanumDriveKinematics; //Makes conversion from ChassisVelocity to WheelSpeeds 
 import edu.wpi.first.math.kinematics.MecanumDriveOdometry; //Allows the tracking of the robot's position on a field
 import edu.wpi.first.math.kinematics.MecanumDriveWheelPositions; // Holds each of the four wheel positions in EncoderCounts
 import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds; // Holds each of the four wheel speeds in RPM
-import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
-import edu.wpi.first.math.kinematics.SwerveDriveOdometry;
-import edu.wpi.first.math.kinematics.SwerveModulePosition;
-import edu.wpi.first.math.kinematics.SwerveModuleState;
 import edu.wpi.first.math.kinematics.proto.ChassisSpeedsProto;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.trajectory.Trajectory;
 import edu.wpi.first.math.trajectory.TrajectoryConfig;
 import edu.wpi.first.math.trajectory.TrajectoryGenerator;
 import edu.wpi.first.math.util.Units;
+import edu.wpi.first.math.controller.PIDController;
 
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
@@ -48,11 +46,6 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVPhysicsSim;
 import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkBase.IdleMode;
-
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.ArrayList; //Each path is stored in an index in an arraylist 
-import edu.wpi.first.math.controller.PIDController;
 
 
 /**
@@ -157,6 +150,10 @@ public class Robot extends TimedRobot {
 
   // Create objects and variables related to UI choices 
   private SendableChooser<Boolean> controlModeChooser = new SendableChooser<>();
+  private SendableChooser<String> autonRoutineChooser = new SendableChooser<>();
+
+  private String defaultRoutine;
+  private String testRoutine;
 
   // These boolean variables are used to determine control options
   private boolean fieldCentricControl;
@@ -219,6 +216,9 @@ public class Robot extends TimedRobot {
   private int currentState;
   private int currentNonOverrideState;  
 
+  private double autonomousStartTime;
+  private double autonomousElapsedTime;
+
   private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;                           // Drive Motors
   private RelativeEncoder leftFrontEncoder, leftBackEncoder, rightFrontEncoder, rightBackEncoder;               // Drive Motor Encoders
   private Translation2d leftFrontTranslation, leftBackTranslation, rightFrontTranslation, rightBackTranslation; // Drive Motors Positions
@@ -237,20 +237,13 @@ public class Robot extends TimedRobot {
 
   private MecanumDriveKinematics kinematics;
   private MecanumDriveOdometry odometry;
+  private RamseteController ramseteController;
 
   // Locations of the wheels relative to the robot center.
   private static final Translation2d flModuleOffset = new Translation2d(0.4, 0.4);
   private static final Translation2d frModuleOffset = new Translation2d(0.4, -0.4);
   private static final Translation2d blModuleOffset = new Translation2d(-0.4, 0.4);
   private static final Translation2d brModuleOffset = new Translation2d(-0.4, -0.4);
-
-  private static final double maxModuleSpeed = 4.5; // M/S
-
-  private static final double kLinearDistanceConverter = 2 * Math.PI * Units.inchesToMeters(3) / 27;
-
-  private String trejectoryJSON = "paths/TestPath.wpilib.json";
-
-  Trajectory testTrajectory = new Trajectory();
 
   // These are example values only - DO NOT USE THESE FOR YOUR OWN ROBOT!
   // These characterization values MUST be determined either experimentally or theoretically
@@ -264,82 +257,7 @@ public class Robot extends TimedRobot {
   // Example value only - as above, this must be tuned for your drive!
   public static final double kPDriveVel = 8.5;
   
-  private void AutonMecanum() {
-    //Integrated Motor Encoders. One revolution of the motor is 42 encoder counts
-    RelativeEncoder leftFrontEncoder = leftFrontMotor.getEncoder();
-    RelativeEncoder rightFrontEncoder = rightFrontMotor.getEncoder();
-    RelativeEncoder leftBackEncoder = leftBackMotor.getEncoder();
-    RelativeEncoder rightBackEncoder = rightBackMotor.getEncoder();
-    kinematics = new MecanumDriveKinematics(
-      flModuleOffset, 
-      frModuleOffset, 
-      blModuleOffset, 
-      brModuleOffset
-    );
-    odometry = new MecanumDriveOdometry(kinematics, navx.getRotation2d(), getWheelPositions());
-  
-  }
-
-  private void AutonMecanumPeriodic() {
-    // Example chassis speeds: 1 meter per second forward, 3 meters
-    // per second to the left, and rotation at 1.5 radians per second
-    // counterclockwise.
-    ChassisSpeeds speeds = new ChassisSpeeds(1.0, 3.0, 1.5);
-
-    // Convert to wheel speeds
-    MecanumDriveWheelSpeeds wheelSpeeds = kinematics.toWheelSpeeds(speeds);
-
-    // Update the odometry in the periodic block
-    odometry.update(navx.getRotation2d(), getWheelPositions());
-
-    // Get the individual wheel speeds
-    double frontLeft = wheelSpeeds.frontLeftMetersPerSecond;
-    double frontRight = wheelSpeeds.frontRightMetersPerSecond;
-    double backLeft = wheelSpeeds.rearLeftMetersPerSecond;
-    double backRight = wheelSpeeds.rearRightMetersPerSecond;
-
-    // Convert to chassis speeds
-    ChassisSpeeds chassisSpeeds = kinematics.toChassisSpeeds(wheelSpeeds);
-
-    // Getting individual speeds
-    double forward = chassisSpeeds.vxMetersPerSecond;
-    double sideways = chassisSpeeds.vyMetersPerSecond;
-    double angular = chassisSpeeds.omegaRadiansPerSecond;
-
-    DrivePerodic(false, forward, sideways, angular, navx);
-  }
-
-  public MecanumDriveWheelSpeeds getWheelSpeeds() {
-    return new MecanumDriveWheelSpeeds(
-      leftFrontEncoder.getVelocity(),
-      rightFrontEncoder.getVelocity(),
-      leftBackEncoder.getVelocity(),
-      rightBackEncoder.getVelocity()
-    );
-  }
-
-  public MecanumDriveWheelPositions getWheelPositions() {
-    return new MecanumDriveWheelPositions(
-        leftFrontEncoder.getPosition(), 
-        rightFrontEncoder.getPosition(),
-        leftBackEncoder.getPosition(), 
-        rightBackEncoder.getPosition()
-      );
-  }
-
-  public Pose2d getPose() {
-    return odometry.getPoseMeters();
-  }
-
-  //Reset encoders to zero
-  public void resetEncoders() {
-    leftFrontEncoder.setPosition(0);
-    rightFrontEncoder.setPosition(0);
-    leftBackEncoder.setPosition(0);
-    rightBackEncoder.setPosition(0);
-  }
-
-  private void SetLEDColor() {
+   private void SetLEDColor() {
     switch (currentColor) {
         case redColor:
             blinkinLED.set(ledRed);
@@ -454,9 +372,13 @@ public class Robot extends TimedRobot {
     rightShooterRoller.setInverted(false);
     intakeRoller.setInverted(false);
     
-    intakeRoller.setIdleMode(IdleMode.kBrake);
+    // Set Idle Modes
+    /* 
+    intakeArm.setIdleMode(IdleMode.kBrake);
     leftClimber.setIdleMode(IdleMode.kBrake);
     rightClimber.setIdleMode(IdleMode.kBrake);
+    leftShooterRoller.setIdleMode(IdleMode.kCoast);
+    rightShooterRoller.setIdleMode(IdleMode.kCoast);*/
   }
 
   private void runIntake(double speed) {
@@ -504,34 +426,32 @@ public class Robot extends TimedRobot {
   }
 
   private void runShooter(double speed, boolean spinup) {
-        // Sets shooter motor speeds; positive for shooting, negative could reverse feed
-      SetState(5);      
-      leftShooterRoller.set(speed);
-      rightShooterRoller.set(speed);
-      if (spinup == false) {
-        runIntake(-speed);
-      }
-      if (debug) {
-
-          // output value to smart dashboard
-          SmartDashboard.putNumber("Current Left Shooter Motor Value", leftShooterRoller.getAppliedOutput());
-          SmartDashboard.putNumber("Current right Shooter Motor Value", rightShooterRoller.getAppliedOutput());
-      }
+    // Sets shooter motor speeds; positive for shooting, negative could reverse feed
+    SetState(5);      
+    leftShooterRoller.set(speed);
+    rightShooterRoller.set(speed);
+    if (spinup == false) {
+      runIntake(-speed);
+    }
+    if (debug) {
+      // output value to smart dashboard
+      SmartDashboard.putNumber("Current Left Shooter Motor Value", leftShooterRoller.getAppliedOutput());
+      SmartDashboard.putNumber("Current right Shooter Motor Value", rightShooterRoller.getAppliedOutput());
+    }
   }
 
   private void stopShooter() {
-      // Stops the shooter motors
-      clearOverrideState();
-      leftShooterRoller.set(0);
-      rightShooterRoller.set(0);
-      intakeRoller.set(0);      
-      isShooterRunning = false;
-      if (debug) {
-
-          // output value to smart dashboard
-          SmartDashboard.putNumber("Current Left Shooter Motor Value", leftShooterRoller.getAppliedOutput());
-          SmartDashboard.putNumber("Current right Shooter Motor Value", rightShooterRoller.getAppliedOutput());
-      }
+    // Stops the shooter motors
+    clearOverrideState();
+    leftShooterRoller.set(0);
+    rightShooterRoller.set(0);
+    intakeRoller.set(0);      
+    isShooterRunning = false;
+    if (debug) {
+      // output value to smart dashboard
+      SmartDashboard.putNumber("Current Left Shooter Motor Value", leftShooterRoller.getAppliedOutput());
+      SmartDashboard.putNumber("Current right Shooter Motor Value", rightShooterRoller.getAppliedOutput());
+    }
   }
 
   private void TimedShooter(double duration) {
@@ -556,77 +476,74 @@ public class Robot extends TimedRobot {
   }
 
   private void RaiseClimbers(){
-      leftClimber.set(climberSpeed);
-      rightClimber.set(climberSpeed);
-      if (debug) {
+    leftClimber.set(climberSpeed);
+    rightClimber.set(climberSpeed);
+    if (debug) {
 
-          // output value to smart dashboard
-          SmartDashboard.putNumber("Current Left Climber Motor Value", leftClimber.getAppliedOutput());
-          SmartDashboard.putNumber("Current Right Climber Motor Value", rightClimber.getAppliedOutput());
-      }
-  }
+        // output value to smart dashboard
+        SmartDashboard.putNumber("Current Left Climber Motor Value", leftClimber.getAppliedOutput());
+        SmartDashboard.putNumber("Current Right Climber Motor Value", rightClimber.getAppliedOutput());
+    }
+}
 
   private void LowerClimbers(){
-      leftClimber.set(-climberSpeed);
-      rightClimber.set(-climberSpeed);
-      if (debug) {
+    leftClimber.set(-climberSpeed);
+    rightClimber.set(-climberSpeed);
+    if (debug) {
 
-          // output value to smart dashboard
-          SmartDashboard.putNumber("Current Left Climber Motor Value", leftClimber.getAppliedOutput());
-          SmartDashboard.putNumber("Current Right Climber Motor Value", rightClimber.getAppliedOutput());
-      }
-  }
+        // output value to smart dashboard
+        SmartDashboard.putNumber("Current Left Climber Motor Value", leftClimber.getAppliedOutput());
+        SmartDashboard.putNumber("Current Right Climber Motor Value", rightClimber.getAppliedOutput());
+    }
+}
 
   private void StopClimbers(){
-      leftClimber.set(0);
-      rightClimber.set(0);      
-      if (debug) {
+    leftClimber.set(0);
+    rightClimber.set(0);      
+    if (debug) {
 
-          // output value to smart dashboard
-          SmartDashboard.putNumber("Current Left Climber Motor Value", leftClimber.getAppliedOutput());
-          SmartDashboard.putNumber("Current Right Climber Motor Value", rightClimber.getAppliedOutput());
-      }
+        // output value to smart dashboard
+        SmartDashboard.putNumber("Current Left Climber Motor Value", leftClimber.getAppliedOutput());
+        SmartDashboard.putNumber("Current Right Climber Motor Value", rightClimber.getAppliedOutput());
+    }
   }
 
-    /**
+  /**
   * Initializes and updates the robot's component simulations for development and testing.
-    */
-    // Constructor
-    private void IntakeArmInit() {
-      intakeArm = new CANSparkMax(intakeArmPivitMotorCANID, MotorType.kBrushless);        
-      intakeArm.setInverted(false);
-      intakeHexEncoder = new DutyCycleEncoder(intakeHexEncoderPWMChannel);
+  */
+  // Constructor
+  private void IntakeArmInit() {
+    intakeArm = new CANSparkMax(intakeArmPivitMotorCANID, MotorType.kBrushless);        
+    intakeArm.setInverted(false);
+    intakeHexEncoder = new DutyCycleEncoder(intakeHexEncoderPWMChannel);
   }
 
   private void MoveIntakeArmUp(double speed) {
     intakeArm.set(speed);
     if (debug) {
-
-        // Output Motor Values to Smart Dashboard for troubleshooting
-        SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
-        SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
-        SmartDashboard.putNumber("Intake Arm Hex Encoder Absolate Position", intakeHexEncoder.getAbsolutePosition());
+      // Output Motor Values to Smart Dashboard for troubleshooting
+      SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
+      SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
+      SmartDashboard.putNumber("Intake Arm Hex Encoder Absolate Position", intakeHexEncoder.getAbsolutePosition());
     }
   }
 
   private void MoveIntakeArmDown(double speed) {
     intakeArm.set(-speed);
     if (debug) {
-
-        // Output Motor Values to Smart Dashboard for troubleshooting
-        SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
-        SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
-        SmartDashboard.putNumber("Intake Arm Hex Encoder Absolute Position", intakeHexEncoder.getAbsolutePosition());
+      // Output Motor Values to Smart Dashboard for troubleshooting
+      SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
+      SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
+      SmartDashboard.putNumber("Intake Arm Hex Encoder Absolute Position", intakeHexEncoder.getAbsolutePosition());
     }
   }
-    private void StopIntakeArm() {
+  private void StopIntakeArm() {
     intakeArm.set(0);
     if (debug) {
-
-        // Output Motor Values to Smart Dashboard for troubleshooting
-        SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
-        SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
-        SmartDashboard.putNumber("Intake Arm Hex Encoder Absolute Position", intakeHexEncoder.getAbsolutePosition());
+      // Output Motor Values to Smart Dashboard for troubleshooting
+      SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
+      SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
+      SmartDashboard.putNumber("Intake Arm Hex Encoder Absolute Position", intakeHexEncoder.getAbsolutePosition());
     }
   }
 
@@ -744,18 +661,47 @@ public class Robot extends TimedRobot {
     }
   }
 
-  private void ButtonControllsPeriodic() {
+  private void ButtonControllsPeriodic() {    
+    // Define Controller Inputs
 
+    /**
+     * Button Mapping:
+     * - XboxMovementController (Port 0):
+     *   - Left Y Axis: Drive forward/reverse
+     *   - Left X Axis: Strafe left/right
+     *   - Right X Axis: Rotate
+     *   - Start Button: Calibrate Ahrs
+     *   - Right Bumper: Increase movement speed
+     *   - Left Bumper: Decrease movement speed
+     *
+     * - XboxInteractionController (Port 1):
+     *   - Left Trig: Run Intake
+     *   - Right Trig: Run Shooter
+     *   - A Button: Intake Position Speaker
+     *   - B Button: Intake Position Intake
+     *   - Start BUtton: Intake Position Amp
+     *   - Y Button: Raise Climbers
+     *   - X Button: Lower Climbers
+     */
+
+    if (xboxMovementController.getRightBumperPressed()){
+      // Increase movement speed by 0.25 (up to a maximum of 1.0)
+      movementSpeed += 0.25;
+      movementSpeed = Math.min(movementSpeed, 1.0);
+    } 
+    
+    if (xboxMovementController.getLeftBumperPressed()) {
+      // Decrease movement speed by 0.25 (down to a minimum of 0.25)
+      movementSpeed -= 0.25;
+      movementSpeed = Math.max(movementSpeed, 0.25);
+    }
     // Reset the Ahrs when the "Start" button is pressed, and set the LED to blue so the operators know it's busy
-    if (xboxMovementController.getStartButtonPressed()) {
-      
+    if (xboxMovementController.getStartButtonPressed()) {      
       if (debug) {
         System.out.println("Resetting navx");
       }
       navx.reset();
-
     }
-
     // If Right Trigger is pressed on the interaction controller, run the shooter
     if (xboxInteractionController.getRightTriggerAxis() > 0.2) {
       if (debug) {
@@ -763,7 +709,6 @@ public class Robot extends TimedRobot {
       }
       TimedShooter(3); // Adjust shooterSpeed to your desired speed
     }
-
     // If Left Trigger is pressed on the interaction controller, run the intake
     if (xboxInteractionController.getLeftTriggerAxis() > 0.2) {
       if (debug) {
@@ -771,21 +716,6 @@ public class Robot extends TimedRobot {
       }
       timedIntake(5); // Adjust intakeSpeed to your desired speed
     }
-
-    /* 
-    // Intake Arm Position
-    if (xboxInteractionController.getAButtonPressed()) {
-      MoveIntakeArmUp(intakeArmSpeed);
-    } else if (xboxInteractionController.getAButtonReleased()){
-      StopIntakeArm();
-    }
-    if (xboxInteractionController.getBButtonPressed()) {
-      MoveIntakeArmDown(intakeArmSpeed);
-    } else if (xboxInteractionController.getBButtonReleased()){
-      StopIntakeArm();
-    }
-    */
-
     // Intake Arm Position
     if (xboxInteractionController.getAButtonPressed()) {
       IntakeArmSpeakerPosition();
@@ -794,7 +724,6 @@ public class Robot extends TimedRobot {
     } else if (xboxInteractionController.getStartButtonPressed()) {
       IntakeArmAmpPosition();
     }
-
     // Raising and Lowering Climber 
     if (xboxInteractionController.getYButtonPressed()) {
       RaiseClimbers();
@@ -805,7 +734,6 @@ public class Robot extends TimedRobot {
     } else if (xboxInteractionController.getXButtonReleased()){
       StopClimbers();
     }
-
   }
 
   private void InteractionPeriodic() { 
@@ -814,7 +742,6 @@ public class Robot extends TimedRobot {
     IntakeArmPeriodic();
     GamePieceDetectionPeriodic();
     if (debug) {
-
         // Output Motor Values to Smart Dashboard for troubleshooting
         SmartDashboard.putNumber("Current Timer Value",Timer.getFPGATimestamp());
     }
@@ -841,11 +768,9 @@ public class Robot extends TimedRobot {
   * @param ahrs The robot's gyroscope sensor for orientation.
   * @param debug Enables diagnostic output to SmartDashboard.
   */
-  private void DrivePerodic(boolean fieldCentricControl,double yAxisValue, double xAxisValue, double zAxisValue, AHRS ahrs) {
-      
+  private void DrivePerodic(boolean fieldCentricControl,double yAxisValue, double xAxisValue, double zAxisValue, AHRS ahrs) {      
       if (fieldCentricControl){
           // Drive System Code from https://gm0.org/en/latest/docs/software/tutorials/mecanum-drive.html
-
           // Calculate movement based on robot orientation for field-centric control
           double botHeading = ahrs.getRotation2d().getRadians();
           double rotX = xAxisValue * Math.cos(-botHeading) - yAxisValue * Math.sin(-botHeading);
@@ -855,7 +780,6 @@ public class Robot extends TimedRobot {
           leftBackMotor.set((rotY - rotX + zAxisValue) / denominator);
           rightFrontMotor.set((rotY - rotX - zAxisValue) / denominator);
           rightBackMotor.set((rotY + rotX - zAxisValue)  / denominator);
-
       } else{
           // Directly apply input for robot-centric control
           double denominator = Math.max(Math.abs(yAxisValue) + Math.abs(xAxisValue) + Math.abs(zAxisValue), 1);
@@ -863,20 +787,49 @@ public class Robot extends TimedRobot {
           leftBackMotor.set((yAxisValue - xAxisValue + zAxisValue) / denominator);
           rightFrontMotor.set((yAxisValue - xAxisValue - zAxisValue) / denominator);
           rightBackMotor.set((yAxisValue + xAxisValue - zAxisValue)  / denominator);
-
       }
 
       // if debug mode is on, provide diagnostic data to the smart dashboard
       if (debug) {
-
           // Output Motor Values to Smart Dashboard for troubleshooting
           SmartDashboard.putNumber("Left Front Motor Power", leftFrontMotor.getAppliedOutput());
           SmartDashboard.putNumber("Left Back Motor Power", leftBackMotor.getAppliedOutput());
           SmartDashboard.putNumber("Right Front Motor Power", rightFrontMotor.getAppliedOutput());
           SmartDashboard.putNumber("Right Back Motor Power", rightBackMotor.getAppliedOutput());
-
       }
+  }  
+
+  private void defaultAutonomousTimedRoutine() {
+    /*
+     * Run Shooter and wait 3 seconds
+     * Run intake and move Backwards for 2 seconds and stop if game piece is loaded
+     * Move forwards for 2 seconds
+     * Run shooter
+     */
+    if (autonomousElapsedTime < 3) {                                                              // Until 3 Seconds
+      TimedShooter(3);                                                                    // Run Shooter
+    } else if (autonomousElapsedTime >= 3 && autonomousElapsedTime < 5) {                         // Between 3 and 5 Seconds
+      timedIntake(-1);                                                                              // Run Intake
+      DrivePerodic(false, -1, 0, 0, navx);                // Move Backwards
+      if (isGamePieceLoaded == true) {                                                              // IF Game Piece is loaded
+        DrivePerodic(false, 0, 0, 0, navx);     // Stop Moving
+      }
+    } else if (autonomousElapsedTime >=5 && autonomousElapsedTime < 7) {                          // Between 5 and 7 Seconds
+    DrivePerodic(false, 1, 0, 0, navx);       // Move Forwards
+    } else if (autonomousElapsedTime >= 7 && autonomousElapsedTime < 10) {                        // Between 7 and 10 Seconds
+      DrivePerodic(false, 0, 0, 0, navx);     // Stop Moving
+    TimedShooter(3);                                                                      // Run Shooter
+    }
   }
+
+  private void testAutonomousTimedRoutine() {
+    if (autonomousElapsedTime < 3) { 
+      DrivePerodic(true, 1, 0, 0.3, navx);    
+    } else if (autonomousElapsedTime >= 3 && autonomousElapsedTime < 5) { 
+      DrivePerodic(false, 0, 0, 0.3, navx);
+    }
+  }
+
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -901,8 +854,13 @@ public class Robot extends TimedRobot {
     controlModeChooser.addOption("Field-Centric Control", true);
     controlModeChooser.addOption("Robot-Centric Control", false);
 
-    // Put the chooser on the SmartDashboard
+    // Add otpions to the Autonomus Chooser
+    autonRoutineChooser.addOption("Default Routine",defaultRoutine);
+    autonRoutineChooser.addOption("Test Routine",testRoutine);
+
+    // Put the choosers on the SmartDashboard
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
+    SmartDashboard.putData("Autonomus Routine Chooser", autonRoutineChooser);
 
     try {
       // Attempt to initialize the AHRS (Attitude and Heading Reference System) device using the MXP SPI port.
@@ -930,7 +888,11 @@ public class Robot extends TimedRobot {
    * SmartDashboard integrated updating.
    */
   @Override
-  public void robotPeriodic() {}
+  public void robotPeriodic() {
+    if (isGamePieceLoaded == true){
+      SetState(2);
+    } else {SetState(1);}
+  }
 
   /**
    * This autonomous (along with the chooser code above) shows how to select between different
@@ -946,83 +908,46 @@ public class Robot extends TimedRobot {
   public void autonomousInit() {
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (debug) { System.out.println("Entering autonomousInit Phase");}
-    AutonMecanum();    
+    autonomousStartTime = Timer.getFPGATimestamp();
   }
 
    @Override
   public void autonomousPeriodic() {
-    AutonMecanumPeriodic();
-    
-  }
 
+    // Update Elapsed Time
+    autonomousElapsedTime = Timer.getFPGATimestamp() - autonomousStartTime;
+    
+    // Update Periodic Methods
+    InteractionPeriodic();
+    RobotStatePeriodic();
+
+    // Execute the corresponding autonomous routine
+    if (autonRoutineChooser.getSelected() == testRoutine) {
+      defaultAutonomousTimedRoutine();
+    } else {
+      testAutonomousTimedRoutine();
+    }
+  }
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
 
   // If debug mode is on, write a line that lets us know what mode we're entering
   if (debug) { System.out.println("Entering teleopInit Phase");}
-
     // If statement to see if our Mode Choser outputs worked, and if not, have some fall back values (Mostly for Simulation Mode)
-    if (controlModeChooser.getSelected() != null) {
-      
+    if (controlModeChooser.getSelected() != null) {      
       // Set variables fieldCentricControl and twoControllerMode to options selected on interactive chooser by the operators
       fieldCentricControl = controlModeChooser.getSelected();
-
     } else {
-
       // Handle the case where one or both values are null (simulation mode). Also log message because that is probably interesting to see
       System.err.println("Error: Unable to retrieve control mode or controller mode from choosers. Using default values.");
-      fieldCentricControl = false;
-      
+      fieldCentricControl = false;      
     }
-
   }
 
   /** This function is called periodically during operator control. */
   @Override
-  public void teleopPeriodic() {
-    
-    // Define Controller Inputs
-
-    /**
-     * Button Mapping:
-     * - XboxMovementController (Port 0):
-     *   - Left Y Axis: Drive forward/reverse
-     *   - Left X Axis: Strafe left/right
-     *   - Right X Axis: Rotate
-     *   - Start Button: Calibrate Ahrs
-     *   - Right Bumper: Increase movement speed
-     *   - Left Bumper: Decrease movement speed
-     *
-     * - XboxInteractionController (Port 1):
-     *   - Left Trig: Run Intake
-     *   - Right Trig: Run Shooter
-     *   - A Button: Intake Position Speaker
-     *   - B Button: Intake Position Intake
-     *   - Start BUtton: Intake Position Amp
-     *   - Y Button: Raise Climbers
-     *   - X Button: Lower Climbers
-     */
-
-    if (isGamePieceLoaded == true){
-      SetState(2);
-    } else {SetState(1);}
-
-    if (xboxMovementController.getRightBumperPressed()){
-
-      // Increase movement speed by 0.25 (up to a maximum of 1.0)
-      movementSpeed += 0.25;
-      movementSpeed = Math.min(movementSpeed, 1.0);
-
-    } 
-    
-    if (xboxMovementController.getLeftBumperPressed()) {
-
-      // Decrease movement speed by 0.25 (down to a minimum of 0.25)
-      movementSpeed -= 0.25;
-      movementSpeed = Math.max(movementSpeed, 0.25);
-
-    }
+  public void teleopPeriodic() {    
 
     // Movement variables provided they are above deadzone threshold
     double yAxisValue = 0;
@@ -1047,7 +972,6 @@ public class Robot extends TimedRobot {
 
     // If debug mode is on, provide diagnostic information to the smart dashboard
     if (debug) {
-
       // Output X, Y, and Z values to Smart Dashboard for Troubleshooting
       SmartDashboard.putNumber("Current X Value", xAxisValue);
       SmartDashboard.putNumber("Current Y Value", yAxisValue);
@@ -1058,7 +982,6 @@ public class Robot extends TimedRobot {
       SmartDashboard.putNumber("Current ahrs Rotation", navx.getRotation2d().getDegrees());
 
     }
-
     DrivePerodic(fieldCentricControl, yAxisValue, xAxisValue, zAxisValue, navx);
   }
 
