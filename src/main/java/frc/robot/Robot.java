@@ -834,11 +834,13 @@ public class Robot extends TimedRobot {
   }
 
   private void testAutonomousTimedRoutine() {
-    if (autonomousElapsedTime < 3) { 
-      DrivePerodic(true, 1, 0, 0.3, navx);    
-    } else if (autonomousElapsedTime >= 3 && autonomousElapsedTime < 5) { 
-      DrivePerodic(false, 0, 0, 0.3, navx);
-    }
+    if (autonomousElapsedTime < 0.1) { 
+      IntakeArmSpeakerPosition();
+    }else if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
+      timedIntake(3); 
+    }else if (autonomousElapsedTime < 15 ) {
+      DrivePerodic(true, -.07, 0, 0, navx);
+    } 
   }
 
 
