@@ -808,21 +808,21 @@ public class Robot extends TimedRobot {
      * Run shooter
      */
     if (autonomousElapsedTime < 3) {                                                              // Until 3 Seconds
-      TimedShooter(3);                                                                   // Run Shooter
+      TimedShooter(3);                                                                            // Run Shooter
     } else if (autonomousElapsedTime ==4) {                                                       // at 3 Seconds
       IntakeArmIntakePosition();                                                                  // Move to Intake Arm Position
     } else if (autonomousElapsedTime >=5 && autonomousElapsedTime < 8) {                          // Between 5 and 8 Seconds
-      DrivePerodic(false, -1, 0, 0, navx);              // Move Backwards
+      DrivePerodic(false, -1, 0, 0, navx);                                                        // Move Backwards
       timedIntake(-1);                                                                            // Run Intake
       if (isGamePieceLoaded == true) {                                                            // IF Game Piece is loaded
-        DrivePerodic(false, 0, 0, 0, navx);  // Stop Moving
+        DrivePerodic(false, 0, 0, 0, navx);                                                       // Stop Moving
         IntakeArmSpeakerPosition();                                                               // Move to Speaker Arm Position
       }
     } else if (autonomousElapsedTime >=8 && autonomousElapsedTime < 10) {                         // Between 8 and 10 Seconds
-    DrivePerodic(false, 1, 0, 0, navx);      // Move Forwards
+    DrivePerodic(false, 1, 0, 0, navx);                                                           // Move Forwards
     } else if (autonomousElapsedTime >= 10 && autonomousElapsedTime < 13) {                       // Between 10 and 13 Seconds
-      DrivePerodic(false, 0, 0, 0, navx);    // Stop Moving
-    TimedShooter(3);                                                                     // Run Shooter
+      DrivePerodic(false, 0, 0, 0, navx);                                                         // Stop Moving
+    TimedShooter(3);                                                                              // Run Shooter
     }
   }
 
