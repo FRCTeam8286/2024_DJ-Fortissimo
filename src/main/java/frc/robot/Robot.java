@@ -172,9 +172,9 @@ public class Robot extends TimedRobot {
   private int IntakeArmPosition = 2; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
-  SlewRateLimiter filterX = new SlewRateLimiter(2); 
-  SlewRateLimiter filterY = new SlewRateLimiter(2);
-  SlewRateLimiter filterZ = new SlewRateLimiter(2);
+  SlewRateLimiter filterX = new SlewRateLimiter(3); 
+  SlewRateLimiter filterY = new SlewRateLimiter(3);
+  SlewRateLimiter filterZ = new SlewRateLimiter(3);
 
   // Create Duty Cycle encoder object for the through bore enocder
   private DutyCycleEncoder intakeHexEncoder;
