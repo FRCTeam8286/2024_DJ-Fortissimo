@@ -807,22 +807,29 @@ public class Robot extends TimedRobot {
      * Move forwards for 2 seconds
      * Run shooter
      */
-    if (autonomousElapsedTime < 3) {                                                              // Until 3 Seconds
-      TimedShooter(3);                                                                            // Run Shooter
-    } else if (autonomousElapsedTime ==4) {                                                       // at 3 Seconds
+    if (autonomousElapsedTime < 0.1) {                                                              // Until 3 Seconds
+      TimedShooter(3);                                                                   // Run Shooter
+    } else if (autonomousElapsedTime > 4 && autonomousElapsedTime < 4.1) {                                                       // at 3 Seconds
       IntakeArmIntakePosition();                                                                  // Move to Intake Arm Position
     } else if (autonomousElapsedTime >=5 && autonomousElapsedTime < 8) {                          // Between 5 and 8 Seconds
-      DrivePerodic(false, -1, 0, 0, navx);                                                        // Move Backwards
-      timedIntake(-1);                                                                            // Run Intake
+      DrivePerodic(true, .065, 0, 0, navx);                                                        // Move Backwards
+      timedIntake(3);                                                                            // Run Intake
       if (isGamePieceLoaded == true) {                                                            // IF Game Piece is loaded
-        DrivePerodic(false, 0, 0, 0, navx);                                                       // Stop Moving
+        DrivePerodic(true, 0, 0, 0, navx);                                                       // Stop Moving
         IntakeArmSpeakerPosition();                                                               // Move to Speaker Arm Position
       }
     } else if (autonomousElapsedTime >=8 && autonomousElapsedTime < 10) {                         // Between 8 and 10 Seconds
-    DrivePerodic(false, 1, 0, 0, navx);                                                           // Move Forwards
-    } else if (autonomousElapsedTime >= 10 && autonomousElapsedTime < 13) {                       // Between 10 and 13 Seconds
-      DrivePerodic(false, 0, 0, 0, navx);                                                         // Stop Moving
-    TimedShooter(3);                                                                              // Run Shooter
+      DrivePerodic(true, -.07, 0, 0, navx);                                                           // Move Forwards
+      if (autonomousElapsedTime >= 9 && autonomousElapsedTime < 9.1){
+      TimedShooter(3);
+      }
+    }else if (autonomousElapsedTime >= 10 && autonomousElapsedTime < 13) {                       // Between 10 and 13 Seconds
+      DrivePerodic(true, 0, 0, 0, navx);                                                         // Stop Moving
+                                                                              // Run Shooter
+    } else if (autonomousElapsedTime > 15) {
+      DrivePerodic(true, .0, 0, 0, navx);
+    }else if (autonomousElapsedTime >= 13 && autonomousElapsedTime < 15) {
+      DrivePerodic(true, .17, 0, 0, navx);
     }
   }
 
