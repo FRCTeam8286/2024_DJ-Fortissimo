@@ -99,8 +99,8 @@ public class Robot extends TimedRobot {
   private static final int gamePieceDetectionSwitchDIOChannel = 0;
 
   // Movement Modifiers
-  private static final double yModifier = 0.7;
-  private static final double xModifier = 0.7;
+  private static final double yModifier = 1;
+  private static final double xModifier = 1;
   private static final double zModifier = 0.5;
 
   // Deadzones
@@ -121,7 +121,7 @@ public class Robot extends TimedRobot {
   private static final double climberSpeed = 0.20;
 
   // Intake Arm Speed
-  private static final double intakeArmSpeed = 0.20;
+  private static final double intakeArmSpeed = 0.30;
 
   // Intake Time
   private static final double intakeTime = 5;
@@ -130,7 +130,7 @@ public class Robot extends TimedRobot {
   private static final double shooterTime = 5;
 
   // Intake Arm Move to/from Intake Position and Speaker Position
-  private static final double armIntakeSpeakerPositionTime = 2;
+  private static final double armIntakeSpeakerPositionTime = 1;
 
   // Intake Arm Move to/from Intake Position and Amp Position
   private static final double armAmpIntakePositionTime = 0.5;
@@ -152,9 +152,6 @@ public class Robot extends TimedRobot {
   private SendableChooser<Boolean> controlModeChooser = new SendableChooser<>();
   private SendableChooser<String> autonRoutineChooser = new SendableChooser<>();
 
-  private String defaultRoutine;
-  private String testRoutine;
-
   // These boolean variables are used to determine control options
   private boolean fieldCentricControl;
 
@@ -167,6 +164,11 @@ public class Robot extends TimedRobot {
   // Variables related to intake pivoting arm
   private CANSparkMax intakeArm;
   private int IntakeArmPosition = 2; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
+
+  private static final String DefaultAuto = "12 Pt. Routine";
+  private static final String FallBackAtuo = "2 Pt. Routine";
+  private static final String thirdAuto = "6 Pt. Routine";
+  private String autoSelected;
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
   SlewRateLimiter filterX = new SlewRateLimiter(3); 
@@ -409,12 +411,16 @@ public class Robot extends TimedRobot {
 
   private void IntakeRollerPeriodic(){
     if (isShooterRunning == false) {
+      if ((Timer.getFPGATimestamp() - intakeStartTime) < intakeDuration){
+        
+      }
       if (isGamePieceLoaded == true){
         intakeStartTime = 0;
       }
       if ((Timer.getFPGATimestamp() - intakeStartTime) < intakeDuration) {        
         // Starts intake motors and schedules it to stop after a duration
         runIntake(intakeSpeed); // Start the intake
+        runShooter(-intakeSpeed, false);
         isIntakeRunning = true; // Flag to track intake state
       } else {
         stopIntake();
@@ -809,14 +815,17 @@ public class Robot extends TimedRobot {
     } else if (autonomousElapsedTime > 4 && autonomousElapsedTime < 4.1) {                                                       // at 3 Seconds
       IntakeArmIntakePosition();                                                                  // Move to Intake Arm Position
     } else if (autonomousElapsedTime >=5 && autonomousElapsedTime < 8) {                          // Between 5 and 8 Seconds
-      DrivePerodic(true, .065, 0, 0, navx);                                                        // Move Backwards
+      DrivePerodic(true, .13, 0, 0, navx);                                                        // Move Backwards
       timedIntake(3);                                                                            // Run Intake
       if (isGamePieceLoaded == true) {                                                            // IF Game Piece is loaded
         DrivePerodic(true, 0, 0, 0, navx);                                                       // Stop Moving
-        IntakeArmSpeakerPosition();                                                               // Move to Speaker Arm Position
+                                                                // Move to Speaker Arm Position
       }
-    } else if (autonomousElapsedTime >=8 && autonomousElapsedTime < 10) {                         // Between 8 and 10 Seconds
-      DrivePerodic(true, -.07, 0, 0, navx);                                                           // Move Forwards
+    } else if (autonomousElapsedTime >=8 && autonomousElapsedTime < 8.1){
+      IntakeArmSpeakerPosition();
+    }else if (autonomousElapsedTime >=8 && autonomousElapsedTime < 10) {    
+                                  // Between 8 and 10 Seconds
+      DrivePerodic(true, -.14, 0, 0, navx);                                                           // Move Forwards
       if (autonomousElapsedTime >= 9 && autonomousElapsedTime < 9.1){
       TimedShooter(3);
       }
@@ -831,16 +840,20 @@ public class Robot extends TimedRobot {
   }
 
   private void testAutonomousTimedRoutine() {
-    if (autonomousElapsedTime < 0.1) { 
-      IntakeArmSpeakerPosition();
-    }else if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
-      timedIntake(3); 
-    }else if (autonomousElapsedTime < 15 ) {
-      DrivePerodic(true, -.07, 0, 0, navx);
-    } 
+    if (autonomousElapsedTime < 5 ) {
+      DrivePerodic(true, .07, 0, 0, navx);
+    } else {
+      DrivePerodic(true, .0, 0, 0, navx);
+    }
   }
 
-
+  private void thirdAutonomousTimedRoutine() {
+    if (autonomousElapsedTime < 0.2) {                                                              // Until 3 Seconds
+          TimedShooter(3);                                                                   // Run Shooter
+    } else if (autonomousElapsedTime >=3.5 && autonomousElapsedTime < 8) {                          // Between 5 and 8 Seconds
+      DrivePerodic(true, .065, 0.65, 0, navx);                                                        // Move Backwards
+    }
+  }
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
@@ -865,8 +878,9 @@ public class Robot extends TimedRobot {
     controlModeChooser.addOption("Robot-Centric Control", false);
 
     // Add otpions to the Autonomus Chooser
-    autonRoutineChooser.addOption("Default Routine",defaultRoutine);
-    autonRoutineChooser.addOption("Test Routine",testRoutine);
+    autonRoutineChooser.addOption("12 Pt Routine",DefaultAuto);
+    autonRoutineChooser.addOption("2 Pt Routine",FallBackAtuo);
+    autonRoutineChooser.addOption("7 Pt Routine",thirdAuto);
 
     // Put the choosers on the SmartDashboard
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
@@ -919,6 +933,7 @@ public class Robot extends TimedRobot {
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (debug) { System.out.println("Entering autonomousInit Phase");}
     autonomousStartTime = Timer.getFPGATimestamp();
+    autoSelected =  autonRoutineChooser.getSelected();
   }
 
    @Override
@@ -932,12 +947,23 @@ public class Robot extends TimedRobot {
     RobotStatePeriodic();
 
     // Execute the corresponding autonomous routine
-    if (autonRoutineChooser.getSelected() == defaultRoutine) {
-      defaultAutonomousTimedRoutine();
-    } else {
+    if (autoSelected == FallBackAtuo){
       testAutonomousTimedRoutine();
+      if (debug) {
+      // Chosen Routine
+        SmartDashboard.putString("Current selected Routine", "2 point Routine");
+      }
+    } else if (autoSelected == thirdAuto) {
+        thirdAutonomousTimedRoutine();
+      SmartDashboard.putString("Current selected Routine", "7 Point Routine");
+    } else {      
+        if (debug) {
+          // Chosen Routine
+          SmartDashboard.putString("Current selected Routine", "12 Point Routine");
+        }
+        defaultAutonomousTimedRoutine();
+      } 
     }
-  }
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
