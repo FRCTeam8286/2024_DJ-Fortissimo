@@ -373,12 +373,9 @@ public class Robot extends TimedRobot {
     intakeRoller.setInverted(false);
     
     // Set Idle Modes
-    /* 
-    intakeArm.setIdleMode(IdleMode.kBrake);
+    
     leftClimber.setIdleMode(IdleMode.kBrake);
     rightClimber.setIdleMode(IdleMode.kBrake);
-    leftShooterRoller.setIdleMode(IdleMode.kCoast);
-    rightShooterRoller.setIdleMode(IdleMode.kCoast);*/
   }
 
   private void runIntake(double speed) {
@@ -850,7 +847,6 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotInit() {
-    
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (debug) { System.out.println("Entering robotInit Phase");}
     
@@ -858,6 +854,7 @@ public class Robot extends TimedRobot {
     DriveTrainInit();
     InteractionSystemInit();
     IntakeArmInit();
+    StopClimbers();
 
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
@@ -935,7 +932,7 @@ public class Robot extends TimedRobot {
     RobotStatePeriodic();
 
     // Execute the corresponding autonomous routine
-    if (autonRoutineChooser.getSelected() == testRoutine) {
+    if (autonRoutineChooser.getSelected() == defaultRoutine) {
       defaultAutonomousTimedRoutine();
     } else {
       testAutonomousTimedRoutine();
@@ -1007,7 +1004,8 @@ public class Robot extends TimedRobot {
 
   /** This function is called periodically when disabled. */
   @Override
-  public void disabledPeriodic() {}
+  public void disabledPeriodic() {
+  }
 
   /** This function is called once when test mode is enabled. */
   @Override
