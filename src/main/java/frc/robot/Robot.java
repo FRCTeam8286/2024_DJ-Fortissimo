@@ -118,25 +118,25 @@ public class Robot extends TimedRobot {
   private static final double intakeSpeed = 0.35;
 
   // Climber Speeds
-  private static final double climberSpeed = 0.20;
+  private static final double climberSpeed = 0.40;
 
   // Intake Arm Speed
-  private static final double intakeArmSpeed = 0.30;
+  private static final double intakeArmSpeed = 0.50;
 
   // Intake Time
   private static final double intakeTime = 5;
 
   // Shooter Time
-  private static final double shooterTime = 5;
+  private static final double shooterTime = 1.5;
 
   // Intake Arm Move to/from Intake Position and Speaker Position
-  private static final double armIntakeSpeakerPositionTime = 1;
+  private static final double armIntakeSpeakerPositionTime = 0.45;
 
   // Intake Arm Move to/from Intake Position and Amp Position
-  private static final double armAmpIntakePositionTime = 0.5;
+  private static final double armAmpIntakePositionTime = 0.25;
 
   // Intake Arm Move to/from Speaker Position and Amp Position
-  private static final double armAmpSpeakerPositionTime = 0.5;
+  private static final double armAmpSpeakerPositionTime = 0.25;
 
   // Define Controller Objects, we'll be associating these with controllers later
   private XboxController xboxMovementController;
@@ -235,7 +235,7 @@ public class Robot extends TimedRobot {
   private double intakeArmDuration = 0;
   private boolean isIntakeArmRunning = false;
   private boolean intakeArmDirection;
-  private double shooterSpinupTime = 1;
+  private double shooterSpinupTime = .25;
 
   private MecanumDriveKinematics kinematics;
   private MecanumDriveOdometry odometry;
@@ -710,7 +710,7 @@ public class Robot extends TimedRobot {
       if (debug) {
         System.out.println("Start Shooter");
       }
-      TimedShooter(3); // Adjust shooterSpeed to your desired speed
+      TimedShooter(.75); // Adjust shooterSpeed to your desired speed
     }
     // If Left Trigger is pressed on the interaction controller, run the intake
     if (xboxInteractionController.getLeftTriggerAxis() > 0.2) {
@@ -848,11 +848,9 @@ public class Robot extends TimedRobot {
   }
 
   private void thirdAutonomousTimedRoutine() {
-    if (autonomousElapsedTime < 0.2) {                                                              // Until 3 Seconds
-          TimedShooter(3);                                                                   // Run Shooter
-    } else if (autonomousElapsedTime >=3.5 && autonomousElapsedTime < 8) {                          // Between 5 and 8 Seconds
-      DrivePerodic(true, .065, 0.65, 0, navx);                                                        // Move Backwards
-    }
+    if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.2) {                                                              // Until 3 Seconds
+      TimedShooter(3);                                                                   // Run Shooter
+    } 
   }
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -880,7 +878,7 @@ public class Robot extends TimedRobot {
     // Add otpions to the Autonomus Chooser
     autonRoutineChooser.addOption("12 Pt Routine",DefaultAuto);
     autonRoutineChooser.addOption("2 Pt Routine",FallBackAtuo);
-    autonRoutineChooser.addOption("7 Pt Routine",thirdAuto);
+    autonRoutineChooser.addOption("5 Pt Routine",thirdAuto);
 
     // Put the choosers on the SmartDashboard
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
