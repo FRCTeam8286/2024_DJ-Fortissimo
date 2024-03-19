@@ -5,35 +5,15 @@
 package frc.robot;
 
 
-import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.controller.RamseteController;
-import edu.wpi.first.math.controller.SimpleMotorFeedforward;
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.Pose2d; //Represents a 2D pose containing translational and rotational elements
-import edu.wpi.first.math.geometry.Rotation2d; //Rotates the robot in the 2D Space
 import edu.wpi.first.math.geometry.Translation2d; //Translates the robot in the 2D Space
-import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.kinematics.MecanumDriveKinematics; //Makes conversion from ChassisVelocity to WheelSpeeds 
-import edu.wpi.first.math.kinematics.MecanumDriveOdometry; //Allows the tracking of the robot's position on a field
-import edu.wpi.first.math.kinematics.MecanumDriveWheelPositions; // Holds each of the four wheel positions in EncoderCounts
-import edu.wpi.first.math.kinematics.MecanumDriveWheelSpeeds; // Holds each of the four wheel speeds in RPM
-import edu.wpi.first.math.kinematics.proto.ChassisSpeedsProto;
 import edu.wpi.first.math.system.plant.DCMotor;
-import edu.wpi.first.math.trajectory.Trajectory;
-import edu.wpi.first.math.trajectory.TrajectoryConfig;
-import edu.wpi.first.math.trajectory.TrajectoryGenerator;
-import edu.wpi.first.math.util.Units;
-import edu.wpi.first.math.controller.PIDController;
-
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
-import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
-import edu.wpi.first.wpilibj.smartdashboard.Field2d;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj2.command.Subsystem;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
@@ -194,8 +174,6 @@ public class Robot extends TimedRobot {
   private double autonomousElapsedTime;
 
   private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;                           // Drive Motors
-  private RelativeEncoder leftFrontEncoder, leftBackEncoder, rightFrontEncoder, rightBackEncoder;               // Drive Motor Encoders
-  private Translation2d leftFrontTranslation, leftBackTranslation, rightFrontTranslation, rightBackTranslation; // Drive Motors Positions
   private CANSparkMax leftShooterRoller, rightShooterRoller, intakeRoller, leftClimber, rightClimber;           // Interaction Motors
   private boolean isIntakeRunning = false;                                                                      // Intake Running Tracker
   private double intakeStartTime = Timer.getFPGATimestamp();                                                    // Start Time tracker
