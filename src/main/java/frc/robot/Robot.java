@@ -127,7 +127,7 @@ public class Robot extends TimedRobot {
   private static final double intakeTime = 5;
 
   // Shooter Time
-  private static final double shooterTime = 1.5;
+  private static final double shooterTime = 0.75;
 
   // Intake Arm Move to/from Intake Position and Speaker Position
   private static final double armIntakeSpeakerPositionTime = 0.45;
@@ -166,8 +166,9 @@ public class Robot extends TimedRobot {
   private int IntakeArmPosition = 2; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
 
   private static final String DefaultAuto = "12 Pt. Routine";
-  private static final String FallBackAtuo = "2 Pt. Routine";
-  private static final String thirdAuto = "6 Pt. Routine";
+  private static final String secondRoutine = "2 Pt. Routine";
+  private static final String thirdRoutine = "6 Pt. Routine";
+  private static final String forthRoutine = "12 Pt. Alternitive Routine";
   private String autoSelected;
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
@@ -177,27 +178,6 @@ public class Robot extends TimedRobot {
 
   // Create Duty Cycle encoder object for the through bore enocder
   private DutyCycleEncoder intakeHexEncoder;
-
-    /**The robot can be in a few states, with corresponding LED colors
-   * 
-   * These are default states that may get overrided:
-   * 0 - Default Mode = Flashing School Colors
-   * 1 - No Game Piece Loaded = Solid Red
-   * 2 - Game Piece Loaded = Solid Green
-   * 
-   * These states will override the default states, and may persist:
-   * 3 - Attempting Generic Operation = Solid Blue
-   * 4 - Attempting to pick up game piece = Solid Yellow
-   * 5 - Attempting to Shoot Game Peice = Solid Orange
-  */
-
-  // Setup LED State Codes
-  private static final int defaultColor = 0;
-  private static final int redColor = 1;
-  private static final int greenColor = 2;
-  private static final int blueColor = 3;
-  private static final int yellowColor = 4;
-  private static final int orangeColor = 5;
 
   // Setup LED PWM Outputs
   public static final double ledRed = 0.61;
@@ -210,14 +190,6 @@ public class Robot extends TimedRobot {
 
   private PWMSparkMax blinkinLED = new PWMSparkMax(Robot.blinkinPWMChannel);
 
-  private int currentColor = redColor;
-  private int nonOverrideState = redColor; // Variable to store the current non-override state
-
-  private double overrideTimer;            // Timer for handling override states
-
-  private int currentState;
-  private int currentNonOverrideState;  
-
   private double autonomousStartTime;
   private double autonomousElapsedTime;
 
@@ -228,24 +200,20 @@ public class Robot extends TimedRobot {
   private boolean isIntakeRunning = false;                                                                      // Intake Running Tracker
   private double intakeStartTime = Timer.getFPGATimestamp();                                                    // Start Time tracker
   private double intakeDuration = 0;
-  private boolean isShooterRunning = false;
+
+  private boolean isShooterRunning = false;  
   private double shooterStartTime = 0;
   private double shooterDuration = 0;
+
   private double intakeArmStartTime = 0;
   private double intakeArmDuration = 0;
   private boolean isIntakeArmRunning = false;
   private boolean intakeArmDirection;
+
   private double shooterSpinupTime = .25;
 
-  private MecanumDriveKinematics kinematics;
-  private MecanumDriveOdometry odometry;
-  private RamseteController ramseteController;
-
-  // Locations of the wheels relative to the robot center.
-  private static final Translation2d flModuleOffset = new Translation2d(0.4, 0.4);
-  private static final Translation2d frModuleOffset = new Translation2d(0.4, -0.4);
-  private static final Translation2d blModuleOffset = new Translation2d(-0.4, 0.4);
-  private static final Translation2d brModuleOffset = new Translation2d(-0.4, -0.4);
+  private double navxZeroStartTime = 0;
+  private static double navxZeroIndicatorTime = 1;
 
   // These are example values only - DO NOT USE THESE FOR YOUR OWN ROBOT!
   // These characterization values MUST be determined either experimentally or theoretically
@@ -259,107 +227,58 @@ public class Robot extends TimedRobot {
   // Example value only - as above, this must be tuned for your drive!
   public static final double kPDriveVel = 8.5;
   
-   private void SetLEDColor() {
-    switch (currentColor) {
-        case redColor:
-            blinkinLED.set(ledRed);
-            break;
-        case greenColor:
-            blinkinLED.set(ledGreen);
-            break;
-        case blueColor:
-            blinkinLED.set(ledBlue);
-            break;
-        case yellowColor:
-            blinkinLED.set(ledYellow);
-            break;
-        case orangeColor:
-            blinkinLED.set(ledOrange);
-            break;
-        default:
-            blinkinLED.set(ledPattern);
-            break;
-    }
-  }
-
-  // Method to handle state transitions and overrides
-  /**
-  * Controls the robot's movement based on joystick input and control mode.
-  * @param desiredState Intager that reresents current robot state. 1=no piece loaded, 2=piece loaded, 3=informational state, 4=Attempting Pickup, 5=Attempting Shooter
+  private void SetLEDColor(int desiredColor) {    
+    /**The robot can be in a few states, with corresponding LED colors
+   * 
+   * These are default states that may get overrided:
+   * 0 - Default Mode = Flashing School Colors
+   * 1 - No Game Piece Loaded = Solid Red
+   * 2 - Game Piece Loaded = Solid Green
+   * 
+   * These states will override the default states, and may persist:
+   * 3 - Attempting Generic Operation = Solid Blue
+   * 4 - Attempting to pick up game piece = Solid Yellow
+   * 5 - Attempting to Shoot Game Peice = Solid Orange
   */
-  private void SetState(int desiredState) {
-    currentState = desiredState;
-    switch (desiredState) {
-        case 1:
-            currentNonOverrideState = desiredState;
-            nonOverrideState = redColor;
-            break;
-        case 2:
-            currentNonOverrideState = desiredState;
-            nonOverrideState = greenColor;
-            break;
-        case 3:
-            overrideState(blueColor);
-            break;
-        case 4:
-            overrideState(yellowColor);
-            break;
-        case 5:
-            overrideState(orangeColor);
-            break;
-        default:
-            // Handle other states or default behavior
-            break;
+  switch (desiredColor) {
+      case 1:
+          blinkinLED.set(ledRed);
+          break;
+      case 2:
+          blinkinLED.set(ledGreen);
+          break;
+      case 3:
+          blinkinLED.set(ledBlue);
+          break;
+      case 4:
+          blinkinLED.set(ledYellow);
+          break;
+      case 5:
+          blinkinLED.set(ledOrange);
+          break;
+      default:
+          blinkinLED.set(ledPattern);
+          break;
     }
   }
 
-  private void overrideState(int color) {
-    // Override current state with a specific color for a duration
-    currentColor = color;
-    overrideTimer = Timer.getFPGATimestamp();
+  private void timedNavxZeroIndecator() {
+    navxZeroStartTime = Timer.getFPGATimestamp();
   }
 
-  private void clearOverrideState() {
-    currentState = currentNonOverrideState;
-    overrideTimer = 0;
-  } 
-
-  private void RobotStatePeriodic() {
-
-    // Update LED state based on timers and non-override state
-    if ((Timer.getFPGATimestamp() - overrideTimer) < 1) {
-        // If override timer has elapsed, revert to non-override state
-        currentColor = nonOverrideState;
-    }   
-
-    if (isGamePieceLoaded == true) {
-      nonOverrideState = greenColor;
+  private void LEDColorPeriodic() {
+    if (isShooterRunning == true){
+      SetLEDColor(5);
+    } else if (isIntakeRunning == true) {
+      SetLEDColor(4);
+    } else if ((Timer.getFPGATimestamp() - navxZeroStartTime) < navxZeroIndicatorTime) {
+      SetLEDColor(3);
+    } else if (isGamePieceLoaded == true) {
+      SetLEDColor(2);
     } else {
-      nonOverrideState = redColor;
+      SetLEDColor(1);
     }
-
-    SetLEDColor(); // Update LED color
-
-    if (debug) {
-
-        // Output Motor Values to Smart Dashboard for troubleshooting
-        SmartDashboard.putNumber("Robot LED State",currentColor);
-        SmartDashboard.putNumber("Robot LED PWM", blinkinLED.get());
-    }
-
   }
-    /**
-   * Manages the robot's drive system, including motor initialization and driving
-   * logic. Supports both field-centric and robot-centric control modes, handling
-   * input processing and motor speed calculations to facilitate smooth and
-   * responsive movement.
-   */
-
-    /**
-   * Controls interaction mechanisms like intakes and shooters, offering methods
-   * for operation and management of these systems within the 
-   */
-  
 
   private void InteractionSystemInit() {
     // Initializes motors for intake and shooter systems as brushless motors
@@ -382,7 +301,6 @@ public class Robot extends TimedRobot {
 
   private void runIntake(double speed) {
     // Sets intake motor speeds; positive values intake, negative values expel
-    SetState(4);
     intakeRoller.set(speed);
     if (debug) {
 
@@ -393,8 +311,7 @@ public class Robot extends TimedRobot {
 
   private void stopIntake() {
       // Stops the intake motors
-      intakeRoller.set(0);
-      clearOverrideState();         
+      intakeRoller.set(0);    
       isIntakeRunning = false;   
       if (debug) {
 
@@ -411,12 +328,10 @@ public class Robot extends TimedRobot {
 
   private void IntakeRollerPeriodic(){
     if (isShooterRunning == false) {
-      if ((Timer.getFPGATimestamp() - intakeStartTime) < intakeDuration){
-        
-      }
       if (isGamePieceLoaded == true){
         intakeStartTime = 0;
       }
+
       if ((Timer.getFPGATimestamp() - intakeStartTime) < intakeDuration) {        
         // Starts intake motors and schedules it to stop after a duration
         runIntake(intakeSpeed); // Start the intake
@@ -430,7 +345,6 @@ public class Robot extends TimedRobot {
 
   private void runShooter(double speed, boolean spinup) {
     // Sets shooter motor speeds; positive for shooting, negative could reverse feed
-    SetState(5);      
     leftShooterRoller.set(speed);
     rightShooterRoller.set(speed);
     if (spinup == false) {
@@ -445,7 +359,6 @@ public class Robot extends TimedRobot {
 
   private void stopShooter() {
     // Stops the shooter motors
-    clearOverrideState();
     leftShooterRoller.set(0);
     rightShooterRoller.set(0);
     intakeRoller.set(0);      
@@ -478,20 +391,9 @@ public class Robot extends TimedRobot {
     }
   }
 
-  private void RaiseClimbers(){
+  private void MoveClimbers(){
     leftClimber.set(climberSpeed);
     rightClimber.set(climberSpeed);
-    if (debug) {
-
-        // output value to smart dashboard
-        SmartDashboard.putNumber("Current Left Climber Motor Value", leftClimber.getAppliedOutput());
-        SmartDashboard.putNumber("Current Right Climber Motor Value", rightClimber.getAppliedOutput());
-    }
-}
-
-  private void LowerClimbers(){
-    leftClimber.set(-climberSpeed);
-    rightClimber.set(-climberSpeed);
     if (debug) {
 
         // output value to smart dashboard
@@ -682,9 +584,7 @@ public class Robot extends TimedRobot {
      *   - Right Trig: Run Shooter
      *   - A Button: Intake Position Speaker
      *   - B Button: Intake Position Intake
-     *   - Start BUtton: Intake Position Amp
-     *   - Y Button: Raise Climbers
-     *   - X Button: Lower Climbers
+     *   - Y Button: Move Climbers
      */
 
     if (xboxMovementController.getRightBumperPressed()){
@@ -698,45 +598,45 @@ public class Robot extends TimedRobot {
       movementSpeed -= 0.25;
       movementSpeed = Math.max(movementSpeed, 0.25);
     }
+
     // Reset the Ahrs when the "Start" button is pressed, and set the LED to blue so the operators know it's busy
     if (xboxMovementController.getStartButtonPressed()) {      
       if (debug) {
         System.out.println("Resetting navx");
       }
+      timedNavxZeroIndecator();
       navx.reset();
     }
+
     // If Right Trigger is pressed on the interaction controller, run the shooter
     if (xboxInteractionController.getRightTriggerAxis() > 0.2) {
       if (debug) {
         System.out.println("Start Shooter");
       }
-      TimedShooter(.75); // Adjust shooterSpeed to your desired speed
+      TimedShooter(shooterTime); // Adjust shooterSpeed to your desired speed
     }
+
     // If Left Trigger is pressed on the interaction controller, run the intake
     if (xboxInteractionController.getLeftTriggerAxis() > 0.2) {
       if (debug) {
         System.out.println("Start Intake");
       }
-      timedIntake(5); // Adjust intakeSpeed to your desired speed
+      timedIntake(intakeTime); // Adjust intakeSpeed to your desired speed
     }
+
     // Intake Arm Position
     if (xboxInteractionController.getAButtonPressed()) {
       IntakeArmSpeakerPosition();
     } else if (xboxInteractionController.getBButtonPressed()) {
       IntakeArmIntakePosition();
-    } else if (xboxInteractionController.getStartButtonPressed()) {
-      IntakeArmAmpPosition();
-    }
+    } 
+
     // Raising and Lowering Climber 
     if (xboxInteractionController.getYButtonPressed()) {
-      RaiseClimbers();
-    } else if (xboxInteractionController.getXButtonPressed()){
-      LowerClimbers();
+      MoveClimbers();
     } else if (xboxInteractionController.getYButtonReleased()){
       StopClimbers();
-    } else if (xboxInteractionController.getXButtonReleased()){
-      StopClimbers();
-    }
+    } 
   }
 
   private void InteractionPeriodic() { 
@@ -804,53 +704,119 @@ public class Robot extends TimedRobot {
 
   private void defaultAutonomousTimedRoutine() {
     /*
-     * Run Shooter and wait 3 seconds
-     * Move to intake position
-     * Run intake and move Backwards for 2 seconds and stop if game piece is loaded
-     * Move forwards for 2 seconds
-     * Run shooter
+     * 12 Point Routine from Center Position
+     * =====================================
+     * 
+     * Shoot Loaded note
+     * Move arm to intake position
+     * Move twards the next game piece
+      * Stop moving as soon as game piece is loaded
+     * Move Intake Arm into Speaker Position
+     * Drive forward
+     * Run Shooter
+     * Move Back
      */
-    if (autonomousElapsedTime < 0.1) {                                                              // Until 3 Seconds
-      TimedShooter(3);                                                                   // Run Shooter
-    } else if (autonomousElapsedTime > 4 && autonomousElapsedTime < 4.1) {                                                       // at 3 Seconds
-      IntakeArmIntakePosition();                                                                  // Move to Intake Arm Position
-    } else if (autonomousElapsedTime >=5 && autonomousElapsedTime < 8) {                          // Between 5 and 8 Seconds
-      DrivePerodic(true, .13, 0, 0, navx);                                                        // Move Backwards
-      timedIntake(3);                                                                            // Run Intake
-      if (isGamePieceLoaded == true) {                                                            // IF Game Piece is loaded
-        DrivePerodic(true, 0, 0, 0, navx);                                                       // Stop Moving
-                                                                // Move to Speaker Arm Position
+    if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
+      TimedShooter(shooterDuration);
+    } else if (autonomousElapsedTime > 1.75 && autonomousElapsedTime < 1.80) {
+      IntakeArmIntakePosition();
+    } else if (autonomousElapsedTime >=2 && autonomousElapsedTime < 5) {
+      DrivePerodic(true, .13, 0, 0, navx);
+      timedIntake(intakeDuration);
+      if (isGamePieceLoaded == true) {
+        DrivePerodic(true, 0, 0, 0, navx); 
       }
-    } else if (autonomousElapsedTime >=8 && autonomousElapsedTime < 8.1){
+    } else if (autonomousElapsedTime >=5 && autonomousElapsedTime < 5.1){
       IntakeArmSpeakerPosition();
-    }else if (autonomousElapsedTime >=8 && autonomousElapsedTime < 10) {    
-                                  // Between 8 and 10 Seconds
-      DrivePerodic(true, -.14, 0, 0, navx);                                                           // Move Forwards
-      if (autonomousElapsedTime >= 9 && autonomousElapsedTime < 9.1){
-      TimedShooter(3);
+    }else if (autonomousElapsedTime >=5 && autonomousElapsedTime < 7) {
+      DrivePerodic(true, -.14, 0, 0, navx);
+      if (autonomousElapsedTime >= 7 && autonomousElapsedTime < 7.1){
+      TimedShooter(shooterDuration);
       }
-    }else if (autonomousElapsedTime >= 10 && autonomousElapsedTime < 13) {                       // Between 10 and 13 Seconds
-      DrivePerodic(true, 0, 0, 0, navx);                                                         // Stop Moving
-                                                                              // Run Shooter
-    } else if (autonomousElapsedTime > 15) {
-      DrivePerodic(true, .0, 0, 0, navx);
-    }else if (autonomousElapsedTime >= 13 && autonomousElapsedTime < 15) {
+    }else if (autonomousElapsedTime >= 7 && autonomousElapsedTime < 7.75) {
+      DrivePerodic(true, 0, 0, 0, navx);
+    }else if (autonomousElapsedTime >= 8 && autonomousElapsedTime < 15) {
       DrivePerodic(true, .17, 0, 0, navx);
+    }else if (autonomousElapsedTime > 15) {
+      DrivePerodic(true, .0, 0, 0, navx);
     }
   }
 
-  private void testAutonomousTimedRoutine() {
+  private void secondAutonomousTimedRoutine() {
+    /*
+     * 2 Point Routine from any Position
+     * =================================
+     * 
+     * Move back for 5 seconds
+     * Stop
+     */
     if (autonomousElapsedTime < 5 ) {
-      DrivePerodic(true, .07, 0, 0, navx);
+      DrivePerodic(true, .17, 0, 0, navx);
     } else {
       DrivePerodic(true, .0, 0, 0, navx);
     }
   }
 
   private void thirdAutonomousTimedRoutine() {
-    if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.2) {                                                              // Until 3 Seconds
-      TimedShooter(3);                                                                   // Run Shooter
+
+    /*
+     * 5 Point Routine from any Speaker Position
+     * =========================================
+     * 
+     * Shoot Loaded note
+     */
+    if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.2) {
+      TimedShooter(shooterDuration);
     } 
+  }
+
+  private void forthAutonomousTimedRoutine() {
+    /*
+     * 12 Point Routine from left side speaker position
+     * =========================================
+     * 
+     * Shoot Loaded note
+     * move Arm to Intake Position
+     * Move Diag
+     * Drop Intake
+     * Rotate
+     * Move Forward
+     * Move back
+     * rotate back
+     * raise intake
+     * move diag
+     * Shoot loaded note
+     * move forword
+     * rotate
+     */
+    if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
+      TimedShooter(shooterDuration);
+    } else if (autonomousElapsedTime > 1.85 && autonomousElapsedTime < 1.9) {
+      IntakeArmIntakePosition();
+    } else if (autonomousElapsedTime > 2 && autonomousElapsedTime < 2.5) {
+      DrivePerodic(true, .20, 0, 0, navx);
+    } else if (autonomousElapsedTime > 2.5 && autonomousElapsedTime < 3.0 && navx.getAngle() > -30) {
+      DrivePerodic(true, 0, 0, -0.25, navx);      
+    } else if (autonomousElapsedTime > 3 && autonomousElapsedTime < 3.1) {
+      IntakeArmSpeakerPosition();
+    } else if (autonomousElapsedTime > 3 && autonomousElapsedTime < 3.5) {
+      DrivePerodic(true, .20, -.20, 0, navx);
+      timedIntake(.5);
+    } else if (autonomousElapsedTime > 3.5 && autonomousElapsedTime < 4) {
+      DrivePerodic(true, -.20, .20, 0, navx);
+    } else if (autonomousElapsedTime > 4 && autonomousElapsedTime < 4.5 && navx.getAngle() < 0) {
+      DrivePerodic(true, 0, 0, 0.25, navx);      
+    } else if (autonomousElapsedTime > 4.5 && autonomousElapsedTime < 5) {
+      DrivePerodic(true, -.20, 0, 0, navx);
+    } else if (autonomousElapsedTime > 5 && autonomousElapsedTime < 5.1) {
+      TimedShooter(shooterDuration);
+    } else if (autonomousElapsedTime > 5 && autonomousElapsedTime < 5.5) {
+      DrivePerodic(true, .20, 0.20, 0, navx); 
+    }else if (autonomousElapsedTime > 5.5 && autonomousElapsedTime < 6 && navx.getAngle() < 40) {
+      DrivePerodic(true, 0, 0, 0.25, navx); 
+    } else {
+      DrivePerodic(true, 0, 0, 0, navx); 
+    }
   }
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -877,8 +843,9 @@ public class Robot extends TimedRobot {
 
     // Add otpions to the Autonomus Chooser
     autonRoutineChooser.addOption("12 Pt Routine",DefaultAuto);
-    autonRoutineChooser.addOption("2 Pt Routine",FallBackAtuo);
-    autonRoutineChooser.addOption("5 Pt Routine",thirdAuto);
+    autonRoutineChooser.addOption("2 Pt Routine",secondRoutine);
+    autonRoutineChooser.addOption("5 Pt Routine",thirdRoutine);
+    autonRoutineChooser.addOption("12 Pt Alternative Routine",forthRoutine);
 
     // Put the choosers on the SmartDashboard
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
@@ -911,9 +878,7 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-    if (isGamePieceLoaded == true){
-      SetState(2);
-    } else {SetState(1);}
+
   }
 
   /**
@@ -942,18 +907,25 @@ public class Robot extends TimedRobot {
     
     // Update Periodic Methods
     InteractionPeriodic();
-    RobotStatePeriodic();
+    LEDColorPeriodic();
 
     // Execute the corresponding autonomous routine
-    if (autoSelected == FallBackAtuo){
-      testAutonomousTimedRoutine();
+    if (autoSelected == secondRoutine){
+      secondAutonomousTimedRoutine();
       if (debug) {
       // Chosen Routine
         SmartDashboard.putString("Current selected Routine", "2 point Routine");
       }
-    } else if (autoSelected == thirdAuto) {
-        thirdAutonomousTimedRoutine();
-      SmartDashboard.putString("Current selected Routine", "7 Point Routine");
+    } else if (autoSelected == thirdRoutine) {
+      thirdAutonomousTimedRoutine();
+      if (debug) {
+        SmartDashboard.putString("Current selected Routine", "5 Point Routine");
+      }
+    } else if (autoSelected == forthRoutine) {
+      forthAutonomousTimedRoutine();
+      if (debug) {
+        SmartDashboard.putString("Current selected Routine", "12 Point Alternitive Routine");
+      }
     } else {      
         if (debug) {
           // Chosen Routine
@@ -1002,7 +974,7 @@ public class Robot extends TimedRobot {
     // Call the Periodic Methods
     ButtonControllsPeriodic();
     InteractionPeriodic();
-    RobotStatePeriodic();
+    LEDColorPeriodic();
 
     // If debug mode is on, provide diagnostic information to the smart dashboard
     if (debug) {
