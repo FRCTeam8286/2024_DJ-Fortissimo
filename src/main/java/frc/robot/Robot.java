@@ -241,10 +241,12 @@ public class Robot extends TimedRobot {
   }
 
   private void timedNavxZeroIndecator() {
+    // This should each time the NavX is zeroed to set a timer for the LED status
     navxZeroStartTime = Timer.getFPGATimestamp();
   }
 
   private void LEDColorPeriodic() {
+    // This should run every cycle to ensure the LED is set to display the correct color
     if (isShooterRunning == true){
       SetLEDColor(5);
     } else if (isIntakeRunning == true) {
@@ -299,12 +301,14 @@ public class Robot extends TimedRobot {
   }
 
   private void timedIntake(double duration) {
+    // This should run once, each time the intake system is requested.
     intakeStartTime = Timer.getFPGATimestamp(); // Record start time for duration tracking
     isIntakeRunning = true; // Flag to track intake state
     intakeDuration = duration;
   }
 
   private void IntakeRollerPeriodic(){
+    // This should run every cycle to ensure the intake roller is or isn't running as expected
     if (isShooterRunning == false) {
       if (isGamePieceLoaded == true){
         intakeStartTime = 0;
@@ -349,12 +353,14 @@ public class Robot extends TimedRobot {
   }
 
   private void TimedShooter(double duration) {
+    // this should run once, every time the shooter system is needed
     shooterStartTime = Timer.getFPGATimestamp(); // Record start time for duration tracking
     isShooterRunning = true; // Flag to track intake state
     shooterDuration = duration;
   }
 
   private void ShooterRollerPeriodic(){
+    // This should run every cycle to ensure the shooter is or isn't running as expected
     if ((Timer.getFPGATimestamp() - shooterStartTime) < shooterDuration) {  
       if ((Timer.getFPGATimestamp() - shooterStartTime) > shooterSpinupTime){     //  We want to give the shooter time to spin up 
         // Starts intake motors and schedules it to stop after a duration
@@ -396,6 +402,7 @@ public class Robot extends TimedRobot {
   */
   // Constructor
   private void IntakeArmInit() {
+    // Intake Arm one time code
     intakeArm = new CANSparkMax(intakeArmPivitMotorCANID, MotorType.kBrushless);        
     intakeArm.setInverted(false);
     intakeHexEncoder = new DutyCycleEncoder(intakeHexEncoderPWMChannel);
@@ -505,6 +512,7 @@ public class Robot extends TimedRobot {
   }
 
   private void IntakeArmPeriodic(){
+    // This should run every cycle to ensure the intake arm is or isn't running as expected
     if ((Timer.getFPGATimestamp() - intakeArmStartTime) < intakeArmDuration) {        
       // Starts intake motors and schedules it to stop after a duration
       if (intakeArmDirection==true){
@@ -538,6 +546,7 @@ public class Robot extends TimedRobot {
   }
 
   private void GamePieceDetectionPeriodic() {
+    // This should run every cycle to check the game piece
     isGamePieceLoaded = !gamePieceDetectionSwitch.get();  // Pulls the value returned fromt he Game Piece Detection Switch and sets it to isGamePieceLoaded variable
     if (debug) {
       SmartDashboard.putBoolean("Gamepiece Limit Switch", isGamePieceLoaded);
@@ -545,7 +554,7 @@ public class Robot extends TimedRobot {
   }
 
   private void ButtonControllsPeriodic() {    
-    // Define Controller Inputs
+    // This should run every teleop cycle to ensure the controls are being captured
 
     /**
      * Button Mapping:
