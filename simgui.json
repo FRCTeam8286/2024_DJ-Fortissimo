@@ -17,6 +17,11 @@
         }
       }
     },
+    "PWM Outputs": {
+      "window": {
+        "visible": true
+      }
+    },
     "RoboRIO": {
       "RoboRIO Input": {
         "open": true
@@ -31,6 +36,13 @@
       "/FMSInfo": "FMSInfo",
       "/SmartDashboard/Autonomus Routine Chooser": "String Chooser",
       "/SmartDashboard/Control Mode Chooser": "String Chooser"
+    },
+    "windows": {
+      "/FMSInfo": {
+        "window": {
+          "visible": true
+        }
+      }
     }
   },
   "NetworkTables Info": {

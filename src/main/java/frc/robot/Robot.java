@@ -6,7 +6,6 @@ package frc.robot;
 
 
 import edu.wpi.first.math.filter.SlewRateLimiter;
-import edu.wpi.first.math.geometry.Translation2d; //Translates the robot in the 2D Space
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
@@ -24,7 +23,6 @@ import com.kauailabs.navx.frc.AHRS;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVPhysicsSim;
-import com.revrobotics.RelativeEncoder;
 import com.revrobotics.CANSparkBase.IdleMode;
 
 
@@ -149,7 +147,7 @@ public class Robot extends TimedRobot {
   private static final String secondRoutine = "2 Pt. Routine";
   private static final String thirdRoutine = "6 Pt. Routine";
   private static final String forthRoutine = "12 Pt. Alternitive Routine";
-  private String autoSelected;
+  private static final String fifthRoutine = "Big Points Routine";
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
   SlewRateLimiter filterX = new SlewRateLimiter(3); 
@@ -187,6 +185,8 @@ public class Robot extends TimedRobot {
   private double intakeArmDuration = 0;
   private boolean isIntakeArmRunning = false;
   private boolean intakeArmDirection;
+
+  private int autonPhase = 0;
 
   private double shooterSpinupTime = .25;
 
@@ -703,6 +703,7 @@ public class Robot extends TimedRobot {
      * Run Shooter
      * Move Back
      */
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "defaultAutonomousTimedRoutine");}
     if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
       TimedShooter(shooterDuration);
     } else if (autonomousElapsedTime > 1.75 && autonomousElapsedTime < 1.80) {
@@ -737,6 +738,7 @@ public class Robot extends TimedRobot {
      * Move back for 5 seconds
      * Stop
      */
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "secondAutonomousTimedRoutine");}
     if (autonomousElapsedTime < 5 ) {
       DrivePerodic(true, .17, 0, 0, navx);
     } else {
@@ -745,13 +747,13 @@ public class Robot extends TimedRobot {
   }
 
   private void thirdAutonomousTimedRoutine() {
-
     /*
      * 5 Point Routine from any Speaker Position
      * =========================================
      * 
      * Shoot Loaded note
      */
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "thirdAutonomousTimedRoutine");}
     if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.2) {
       TimedShooter(shooterDuration);
     } 
@@ -776,6 +778,7 @@ public class Robot extends TimedRobot {
      * move forword
      * rotate
      */
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "forthAutonomousTimedRoutine");}
     if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
       TimedShooter(shooterDuration);
     } else if (autonomousElapsedTime > 1.85 && autonomousElapsedTime < 1.9) {
@@ -805,6 +808,143 @@ public class Robot extends TimedRobot {
       DrivePerodic(true, 0, 0, 0, navx); 
     }
   }
+
+  private void fifthAutonomousTimedRoutine() {
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "fifthAutonomousTimedRoutine");}
+    boolean autonInitPhase = true;
+    double phaseZeroStart = 0;
+    double phaseOneStart = 0;
+    double phaseTwoStart = 0;
+    double phaseThreeStart = 0;
+    double phaseFourStart = 0;
+    double phaseFiveStart = 0;
+    double phaseSixStart = 0;
+    double phaseSevenStart = 0;
+    double phaseEightStart = 0;
+    switch (autonPhase){
+      case 0:
+        if (autonInitPhase == true) {
+          phaseZeroStart = Timer.getFPGATimestamp(); // Set Timer
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          TimedShooter(shooterDuration); // Run Shooter
+          autonInitPhase = false; // Get out of Init Phase
+        } else {
+          if (Timer.getFPGATimestamp() - phaseZeroStart > shooterDuration) { // If this has been running longer than the shooter duration            
+            autonInitPhase = true; // Switch back to Init
+            autonPhase = autonPhase + 1; // Move to the next Phase
+            if (debug) { System.out.println("Done");}
+          }
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 1:
+        if (autonInitPhase == true) {
+          phaseOneStart = Timer.getFPGATimestamp();
+          if (debug) { System.out.println("Entering Phase"+autonPhase+" of Routine");}
+          IntakeArmIntakePosition();
+          autonInitPhase = false;
+        } else {
+          DrivePerodic(true, .30, .30, .30, navx); // Move Diagnal and rotate
+          if (navx.getRotation2d().getDegrees() > 50) {
+            autonInitPhase = true; // Switch back to Init
+            autonPhase = autonPhase + 1; // Move to the next Phase
+          }
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 2:
+        if (autonInitPhase == true) {
+          phaseTwoStart = Timer.getFPGATimestamp();
+          if (debug) { System.out.println("Entering Phase"+autonPhase+" of Routine");}
+          autonInitPhase = false;
+        } else {
+          DrivePerodic(true, .30, .30, 0, navx); // Move Diagnal 
+          timedIntake(intakeTime);
+          if (isGamePieceLoaded == true) {
+            autonInitPhase = true; // Switch back to Init
+            autonPhase = autonPhase + 1; // Move to the next Phase
+          }
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 3:
+        if (autonInitPhase == true) {
+          phaseThreeStart = Timer.getFPGATimestamp();
+          if (debug) { System.out.println("Entering Phase"+autonPhase+" of Routine");}
+          IntakeArmSpeakerPosition();
+          autonInitPhase = false;
+        } else {
+          if (isGamePieceLoaded == true) {
+            autonInitPhase = true; // Switch back to Init
+            autonPhase = autonPhase + 1; // Move to the next Phase
+          }
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 4:
+        if (autonInitPhase == true) {
+          phaseFourStart = Timer.getFPGATimestamp();
+          if (debug) { System.out.println("Entering Phase"+autonPhase+" of Routine");}
+          autonInitPhase = false;
+        } else {
+          DrivePerodic(true, -.30, -.30, -.30, navx); // Move Diagnal and rotate
+          if (navx.getRotation2d().getDegrees() < 10) {
+            autonInitPhase = true; // Switch back to Init
+            autonPhase = autonPhase + 1; // Move to the next Phase
+          }
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 5:
+        if (autonInitPhase == true) {
+          phaseFiveStart = Timer.getFPGATimestamp();
+          if (debug) { System.out.println("Entering Phase"+autonPhase+" of Routine");}
+          autonInitPhase = false;
+        } else {
+          DrivePerodic(true, -.30, -.30, 0, navx); // Move Diagnal
+          if (phaseThreeStart - phaseTwoStart > Timer.getFPGATimestamp() - phaseFiveStart) { // if the time phase 2 took is greater than the time this phase has taken
+            autonInitPhase = true; // Switch back to Init
+            autonPhase = autonPhase + 1; // Move to the next Phase
+          }
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 6:
+        if (autonInitPhase == true) {
+          phaseSixStart = Timer.getFPGATimestamp();
+          if (debug) { System.out.println("Entering Phase"+autonPhase+" of Routine");}
+          TimedShooter(shooterDuration);
+          DrivePerodic(true, 0, 0, 0, navx); // Stop Moving
+          autonInitPhase = false;
+        } else {
+          if (Timer.getFPGATimestamp() - phaseSixStart > shooterDuration){
+            autonInitPhase = true; // Switch back to Init
+            autonPhase = autonPhase + 1; // Move to the next Phase
+          }
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 7:
+        if (autonInitPhase == true) {
+          phaseSevenStart = Timer.getFPGATimestamp();
+          if (debug) { System.out.println("Entering Phase"+autonPhase+" of Routine");}
+          autonInitPhase = false;
+        } else {
+          DrivePerodic(true, .30, .30, .30, navx); // Move Diagnal and rotate
+          if (navx.getRotation2d().getDegrees() > 50) {
+            autonInitPhase = true; // Switch back to Init
+            autonPhase = autonPhase + 1; // Move to the next Phase
+          }          
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 8:
+        if (autonInitPhase == true) {
+          phaseEightStart = Timer.getFPGATimestamp();
+          if (debug) { System.out.println("Entering Phase"+autonPhase+" of Routine");}
+          DrivePerodic(true, 0, 0, 0, navx); // Stop Moving
+        } else {
+          navx.reset();
+        }
+        break; // Ensure execution stops here if this case is processed
+    }
+    
+  }
+
+
+
   /**
    * This function is run when the robot is first started up and should be used for any
    * initialization code.
@@ -833,6 +973,7 @@ public class Robot extends TimedRobot {
     autonRoutineChooser.addOption("2 Pt Routine",secondRoutine);
     autonRoutineChooser.addOption("5 Pt Routine",thirdRoutine);
     autonRoutineChooser.addOption("12 Pt Alternative Routine",forthRoutine);
+    autonRoutineChooser.addOption("Big Points Routine",fifthRoutine);
 
     // Put the choosers on the SmartDashboard
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
@@ -883,7 +1024,6 @@ public class Robot extends TimedRobot {
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (debug) { System.out.println("Entering autonomousInit Phase");}
     autonomousStartTime = Timer.getFPGATimestamp();
-    autoSelected =  autonRoutineChooser.getSelected();
   }
 
    @Override
@@ -897,30 +1037,24 @@ public class Robot extends TimedRobot {
     LEDColorPeriodic();
 
     // Execute the corresponding autonomous routine
-    if (autoSelected == secondRoutine){
-      secondAutonomousTimedRoutine();
-      if (debug) {
-      // Chosen Routine
-        SmartDashboard.putString("Current selected Routine", "2 point Routine");
-      }
-    } else if (autoSelected == thirdRoutine) {
-      thirdAutonomousTimedRoutine();
-      if (debug) {
-        SmartDashboard.putString("Current selected Routine", "5 Point Routine");
-      }
-    } else if (autoSelected == forthRoutine) {
-      forthAutonomousTimedRoutine();
-      if (debug) {
-        SmartDashboard.putString("Current selected Routine", "12 Point Alternitive Routine");
-      }
-    } else {      
-        if (debug) {
-          // Chosen Routine
-          SmartDashboard.putString("Current selected Routine", "12 Point Routine");
-        }
-        defaultAutonomousTimedRoutine();
-      } 
+    switch (autonRoutineChooser.getSelected()) {
+      case secondRoutine:
+          secondAutonomousTimedRoutine();
+          break;
+      case thirdRoutine:
+          thirdAutonomousTimedRoutine();
+          break;
+      case forthRoutine:
+          forthAutonomousTimedRoutine();
+          break;
+      case fifthRoutine:
+          fifthAutonomousTimedRoutine();
+          break;      
+      default:
+          defaultAutonomousTimedRoutine();
+          break;
     }
+  }
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
