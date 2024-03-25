@@ -928,6 +928,7 @@ public class Robot extends TimedRobot {
   }
 
   private void sixthAutonomousTimedRoutine() {
+    double autonSpeed = 0.3;
     if (debug) { SmartDashboard.putString("Autonomous Routine", "sixthAutonomousTimedRoutine");}
     boolean autonInitPhase = true;
     ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
@@ -969,7 +970,7 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   
-        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(2)) > ((phaseStartTimes.get(2) - phaseStartTimes.get(1))) { // Condition to move into next phase
+        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(2)) > ((phaseStartTimes.get(2) - phaseStartTimes.get(1)))) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -978,13 +979,13 @@ public class Robot extends TimedRobot {
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
-          DrivePerodic(true, 0, 0, .0, navx)
-          timedShooter(shoterTime);
+          DrivePerodic(true, 0, 0, .0, navx);
+          TimedShooter(shooterDuration);
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   
         System.out.println("Time So far: " + (Timer.getFPGATimestamp() - phaseStartTimes.get(0)) + " Seconds");
-        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(0)) > shoterTime) { // Condition to move into next phase
+        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(0)) > shooterDuration) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1049,7 +1050,7 @@ public class Robot extends TimedRobot {
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
           DrivePerodic(true, 0, 0, 0, navx);
-          timedShooter(shooterDiration);
+          TimedShooter(shooterDuration);
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically 
