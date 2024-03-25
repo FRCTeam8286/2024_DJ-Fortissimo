@@ -927,6 +927,156 @@ public class Robot extends TimedRobot {
     }
   }
 
+  private void sixthAutonomousTimedRoutine() {
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "sixthAutonomousTimedRoutine");}
+    boolean autonInitPhase = true;
+    ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
+    switch (autonPhase){
+      case 0: // Phase Number
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        TimedShooter(shooterDuration);
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(0) > shooterDuration) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 1: 
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          IntakeArmIntakePosition();
+          DrivePerodic(true, autonSpeed, 0, .0, navx); 
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        runIntake(intakeSpeed);
+        if (isGamePieceLoaded) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 2:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          IntakeArmSpeakerPosition();
+          DrivePerodic(true, -autonSpeed, 0, .0, navx); 
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(2)) > ((phaseStartTimes.get(2) - phaseStartTimes.get(1))) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 3:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          DrivePerodic(true, 0, 0, .0, navx)
+          timedShooter(shoterTime);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        System.out.println("Time So far: " + (Timer.getFPGATimestamp() - phaseStartTimes.get(0)) + " Seconds");
+        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(0)) > shoterTime) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 4:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          DrivePerodic(true, 0.86*autonSpeed, -0.5*autonSpeed, -.5, navx); 
+          IntakeArmIntakePosition();
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   \
+        if (navx.getRotation2d().getDegrees() > 34) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 5:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          DrivePerodic(true, 0.86*autonSpeed, -0.5*autonSpeed, 0, navx);
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        runIntake(intakeSpeed);
+        if (isGamePieceLoaded) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 6:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          stopIntake();
+          DrivePerodic(true, -0.86*autonSpeed, 0.5*autonSpeed, 0, navx);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(6)) > (phaseStartTimes.get(6) - phaseStartTimes.get(5))) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 7:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          DrivePerodic(true, -0.86*autonSpeed, 0.5*autonSpeed, 0.5, navx);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        if (navx.getRotation2d().getDegrees() < 0) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 8:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          DrivePerodic(true, 0, 0, 0, navx);
+          timedShooter(shooterDiration);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically 
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(8) > 0.75) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 9: 
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          autonInitPhase = false; // Get out of Init Phase
+          DrivePerodic(true, autonSpeed, 0, 0, navx);
+        }
+        // Stuff to do periodically   
+        System.out.println("Time So far: " + (Timer.getFPGATimestamp() - phaseStartTimes.get(0)) + " Seconds");
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(8) > 0.2) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 10:
+        DrivePerodic(true, 0, 0, 0, navx);
+        break;
+    }
+  }
   private void templateAutonomousRoutine() {
     if (debug) { SmartDashboard.putString("Autonomous Routine", "templateAutonomousTimedRoutine");}
     boolean autonInitPhase = true;
