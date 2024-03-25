@@ -149,7 +149,8 @@ public class Robot extends TimedRobot {
   private static final String secondRoutine = "2 Pt. Routine";
   private static final String thirdRoutine = "6 Pt. Routine";
   private static final String forthRoutine = "12 Pt. Alternitive Routine";
-  private static final String fifthRoutine = "Big Points Routine";
+  private static final String fifthRoutine = "12 Pt. Alternitive Routine Alt";
+  private static final String sixthRoutine = "Big Points Routine";
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
   SlewRateLimiter filterX = new SlewRateLimiter(3); 
@@ -1131,7 +1132,8 @@ public class Robot extends TimedRobot {
     autonRoutineChooser.addOption("2 Pt Routine",secondRoutine);
     autonRoutineChooser.addOption("5 Pt Routine",thirdRoutine);
     autonRoutineChooser.addOption("12 Pt Alternative Routine",forthRoutine);
-    autonRoutineChooser.addOption("Big Points Routine",fifthRoutine);
+    autonRoutineChooser.addOption("12 Pt Alternative Routine 2",fifthRoutine);
+    autonRoutineChooser.addOption("Big Points Routine",sixthRoutine);
 
     // Put the choosers on the SmartDashboard
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
