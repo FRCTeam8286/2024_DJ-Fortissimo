@@ -709,25 +709,25 @@ public class Robot extends TimedRobot {
      */
     if (debug) { SmartDashboard.putString("Autonomous Routine", "defaultAutonomousTimedRoutine");}
     if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
-      TimedShooter(shooterDuration);
+      TimedShooter(shooterTime);
     } else if (autonomousElapsedTime > 1.75 && autonomousElapsedTime < 1.80) {
       IntakeArmIntakePosition();
-    } else if (autonomousElapsedTime >=2 && autonomousElapsedTime < 5) {
-      DrivePerodic(true, .13, 0, 0, navx);
-      timedIntake(intakeDuration);
-      if (isGamePieceLoaded == true) {
+    } else if (autonomousElapsedTime >=2 && autonomousElapsedTime < 3.5) {
+      if (!isGamePieceLoaded) {
+        DrivePerodic(true, .13, 0, 0, navx);
+        timedIntake(0.25);
+      }
+      if (isGamePieceLoaded) {
         DrivePerodic(true, 0, 0, 0, navx); 
       }
-    } else if (autonomousElapsedTime >=5 && autonomousElapsedTime < 5.1){
+    } if (autonomousElapsedTime >=3.5 && autonomousElapsedTime < 3.6){
       IntakeArmSpeakerPosition();
-    }else if (autonomousElapsedTime >=5 && autonomousElapsedTime < 7) {
+    } if (autonomousElapsedTime >=5 && autonomousElapsedTime < 7) {
       DrivePerodic(true, -.14, 0, 0, navx);
-      if (autonomousElapsedTime >= 7 && autonomousElapsedTime < 7.1){
-      TimedShooter(shooterDuration);
-      }
-    }else if (autonomousElapsedTime >= 7 && autonomousElapsedTime < 7.75) {
+    } if (autonomousElapsedTime >= 7.25 && autonomousElapsedTime < 8){
       DrivePerodic(true, 0, 0, 0, navx);
-    }else if (autonomousElapsedTime >= 8 && autonomousElapsedTime < 15) {
+      TimedShooter(shooterTime);
+    } else if (autonomousElapsedTime >= 8.75 && autonomousElapsedTime < 15) {
       DrivePerodic(true, .17, 0, 0, navx);
     }else if (autonomousElapsedTime > 15) {
       DrivePerodic(true, .0, 0, 0, navx);
@@ -759,7 +759,7 @@ public class Robot extends TimedRobot {
      */
     if (debug) { SmartDashboard.putString("Autonomous Routine", "thirdAutonomousTimedRoutine");}
     if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.2) {
-      TimedShooter(shooterDuration);
+      TimedShooter(shooterTime);
     } 
   }
 
@@ -795,7 +795,7 @@ public class Robot extends TimedRobot {
       IntakeArmSpeakerPosition();
     } else if (autonomousElapsedTime > 3 && autonomousElapsedTime < 3.5) {
       DrivePerodic(true, .20, -.20, 0, navx);
-      timedIntake(.5);
+      timedIntake(intakeTime);
     } else if (autonomousElapsedTime > 3.5 && autonomousElapsedTime < 4) {
       DrivePerodic(true, -.20, .20, 0, navx);
     } else if (autonomousElapsedTime > 4 && autonomousElapsedTime < 4.5 && navx.getAngle() < 0) {
@@ -938,10 +938,10 @@ public class Robot extends TimedRobot {
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          TimedShooter(shooterTime);
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   
-        TimedShooter(shooterDuration);
         if (Timer.getFPGATimestamp() - phaseStartTimes.get(0) > shooterDuration) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
@@ -981,7 +981,7 @@ public class Robot extends TimedRobot {
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
           DrivePerodic(true, 0, 0, .0, navx);
-          TimedShooter(shooterDuration);
+          TimedShooter(shooterTime);
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   
@@ -1051,7 +1051,7 @@ public class Robot extends TimedRobot {
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
           DrivePerodic(true, 0, 0, 0, navx);
-          TimedShooter(shooterDuration);
+          TimedShooter(shooterTime);
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically 
