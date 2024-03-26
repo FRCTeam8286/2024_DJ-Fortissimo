@@ -1209,6 +1209,9 @@ public class Robot extends TimedRobot {
           break;
       case fifthRoutine:
           fifthAutonomousTimedRoutine();
+          break;
+      case sixthRoutine:
+          sixthAutonomousTimedRoutine();
           break;      
       default:
           defaultAutonomousTimedRoutine();
