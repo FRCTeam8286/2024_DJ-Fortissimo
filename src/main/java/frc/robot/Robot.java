@@ -379,9 +379,9 @@ public class Robot extends TimedRobot {
     }
   }
 
-  private void MoveClimbers(){
-    leftClimber.set(climberSpeed);
-    rightClimber.set(climberSpeed);
+  private void MoveClimbers(double speed){
+    leftClimber.set(speed);
+    rightClimber.set(speed);
     if (debug) {
 
         // output value to smart dashboard
@@ -624,7 +624,7 @@ public class Robot extends TimedRobot {
 
     // Raising and Lowering Climber 
     if (xboxInteractionController.getYButtonPressed()) {
-      MoveClimbers();
+      MoveClimbers(climberSpeed);
     } else if (xboxInteractionController.getYButtonReleased()){
       StopClimbers();
     } 
