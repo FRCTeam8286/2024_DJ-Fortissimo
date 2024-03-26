@@ -76,7 +76,7 @@ public class Robot extends TimedRobot {
   private static final int intakeHexEncoderPWMChannel = 2;
 
   // DIO Channels
-  private static final int gamePieceDetectionSwitchDIOChannel = 0;
+  private static final int gamePieceDetectionSwitchDIOChannel = 1;
 
   // Movement Modifiers
   private static final double yModifier = 1;
@@ -98,10 +98,10 @@ public class Robot extends TimedRobot {
   private static final double intakeSpeed = 0.35;
 
   // Climber Speeds
-  private static final double climberSpeed = 0.40;
+  private static final double climberSpeed = 0.60;
 
   // Intake Arm Speed
-  private static final double intakeArmSpeed = 0.50;
+  private static final double intakeArmSpeed = 0.60;
 
   // Intake Time
   private static final double intakeTime = 5;
@@ -110,13 +110,13 @@ public class Robot extends TimedRobot {
   private static final double shooterTime = 0.75;
 
   // Intake Arm Move to/from Intake Position and Speaker Position
-  private static final double armIntakeSpeakerPositionTime = 0.45;
+  private static final double armIntakeSpeakerPositionTime = 0.55;
 
   // Intake Arm Move to/from Intake Position and Amp Position
   private static final double armAmpIntakePositionTime = 0.25;
 
   // Intake Arm Move to/from Speaker Position and Amp Position
-  private static final double armAmpSpeakerPositionTime = 0.25;
+  private static final double armAmpSpeakerPositionTime = 0.30;
 
   // Define Controller Objects, we'll be associating these with controllers later
   private XboxController xboxMovementController;
@@ -193,6 +193,8 @@ public class Robot extends TimedRobot {
   private boolean autonInitPhase = true;
 
   private double shooterSpinupTime = .25;
+
+  ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
 
   private double navxZeroStartTime = 0;
   private static double navxZeroIndicatorTime = 1;
@@ -271,14 +273,18 @@ public class Robot extends TimedRobot {
     intakeRoller = new CANSparkMax(intakeRollerMotorCANID, MotorType.kBrushless);
     leftClimber = new CANSparkMax(leftClimberMotorCANID, MotorType.kBrushless);
     rightClimber = new CANSparkMax(rightClimberMotorCANID, MotorType.kBrushless);
-
+    intakeArm = new CANSparkMax(intakeArmPivitMotorCANID, MotorType.kBrushless);        
+  
     // Configure initial motor settings (e.g., inversion)      
     leftShooterRoller.setInverted(true); 
     rightShooterRoller.setInverted(false);
     intakeRoller.setInverted(false);
-    
+    leftClimber.setInverted(true);
+    rightClimber.setInverted(false);
+    intakeArm.setInverted(false);
+      
     // Set Idle Modes
-    
+    intakeArm.setIdleMode(IdleMode.kCoast);
     leftClimber.setIdleMode(IdleMode.kBrake);
     rightClimber.setIdleMode(IdleMode.kBrake);
   }
@@ -407,8 +413,6 @@ public class Robot extends TimedRobot {
   // Constructor
   private void IntakeArmInit() {
     // Intake Arm one time code
-    intakeArm = new CANSparkMax(intakeArmPivitMotorCANID, MotorType.kBrushless);        
-    intakeArm.setInverted(false);
     intakeHexEncoder = new DutyCycleEncoder(intakeHexEncoderPWMChannel);
   }
 
@@ -446,7 +450,8 @@ public class Robot extends TimedRobot {
      * Case 0 = Intake arm is at intake position
      * Case 1 = Intake arm is at amp position
      * Case 2 = Intake arm is in speaker position
-     */
+     */    
+    intakeArm.setIdleMode(IdleMode.kCoast);
     switch(IntakeArmPosition) {
       case 0:
         timedIntakeArmUp(armIntakeSpeakerPositionTime);
@@ -468,6 +473,7 @@ public class Robot extends TimedRobot {
      * Case 1 = Intake arm is at amp position
      * Case 2 = Intake arm is in speaker position
      */
+    intakeArm.setIdleMode(IdleMode.kBrake);
     switch(IntakeArmPosition) {
       case 0:
         timedIntakeArmUp(armAmpIntakePositionTime);
@@ -487,6 +493,7 @@ public class Robot extends TimedRobot {
      * Case 1 = Intake arm is at amp position
      * Case 2 = Intake arm is in speaker position
      */
+    intakeArm.setIdleMode(IdleMode.kCoast);
     switch(IntakeArmPosition) {
       case 1:
         timedIntakeArmDown(armAmpIntakePositionTime);
@@ -620,12 +627,21 @@ public class Robot extends TimedRobot {
       IntakeArmSpeakerPosition();
     } else if (xboxInteractionController.getBButtonPressed()) {
       IntakeArmIntakePosition();
+    } else if (xboxInteractionController.getStartButtonPressed()) {
+      IntakeArmAmpPosition();
     } 
+
 
     // Raising and Lowering Climber 
     if (xboxInteractionController.getYButtonPressed()) {
-      MoveClimbers(climberSpeed);
+      MoveClimbers(-climberSpeed);
     } else if (xboxInteractionController.getYButtonReleased()){
+      StopClimbers();
+    } 
+    // Raising and Lowering Climber 
+    if (xboxInteractionController.getXButtonPressed()) {
+      MoveClimbers(climberSpeed);
+    } else if (xboxInteractionController.getXButtonReleased()){
       StopClimbers();
     } 
   }
@@ -929,10 +945,8 @@ public class Robot extends TimedRobot {
   }
 
   private void sixthAutonomousTimedRoutine() {
-    double autonSpeed = 0.3;
+    double autonSpeed = 0.15;
     if (debug) { SmartDashboard.putString("Autonomous Routine", "sixthAutonomousTimedRoutine");}
-    boolean autonInitPhase = true;
-    ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
     switch (autonPhase){
       case 0: // Phase Number
         if (autonInitPhase) { // Setup if statement for one time auton
@@ -986,7 +1000,7 @@ public class Robot extends TimedRobot {
         }
         // Stuff to do periodically   
         System.out.println("Time So far: " + (Timer.getFPGATimestamp() - phaseStartTimes.get(0)) + " Seconds");
-        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(0)) > shooterDuration) { // Condition to move into next phase
+        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(3)) > shooterDuration) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -994,7 +1008,7 @@ public class Robot extends TimedRobot {
       case 4:
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
-          DrivePerodic(true, 0.86*autonSpeed, -0.5*autonSpeed, -.5, navx); 
+          DrivePerodic(true, 0.86*autonSpeed, -0.5*autonSpeed, -.15, navx); 
           IntakeArmIntakePosition();
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
           autonInitPhase = false; // Get out of Init Phase
@@ -1037,7 +1051,7 @@ public class Robot extends TimedRobot {
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
-          DrivePerodic(true, -0.86*autonSpeed, 0.5*autonSpeed, 0.5, navx);
+          DrivePerodic(true, -0.86*autonSpeed, 0.5*autonSpeed, 0.15, navx);
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   
