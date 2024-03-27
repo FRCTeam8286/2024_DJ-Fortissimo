@@ -831,7 +831,6 @@ public class Robot extends TimedRobot {
 
   private void fifthAutonomousTimedRoutine() {
     if (debug) { SmartDashboard.putString("Autonomous Routine", "fifthAutonomousTimedRoutine");}
-    ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
     switch (autonPhase){
       case 0:
         if (autonInitPhase) {
@@ -1093,10 +1092,10 @@ public class Robot extends TimedRobot {
         break;
     }
   }
+
   private void templateAutonomousRoutine() {
     if (debug) { SmartDashboard.putString("Autonomous Routine", "templateAutonomousTimedRoutine");}
     boolean autonInitPhase = true;
-    ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
     switch (autonPhase){
       case 0: // Phase Number
         if (autonInitPhase) { // Setup if statement for one time auton
