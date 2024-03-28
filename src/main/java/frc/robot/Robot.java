@@ -162,6 +162,7 @@ public class Robot extends TimedRobot {
   private static final String forthRoutine = "12 Pt. Alternitive Routine";
   private static final String fifthRoutine = "12 Pt. Alternitive Routine Alt";
   private static final String sixthRoutine = "Big Points Routine";
+  private static final String seventhRoutine = "Huge Points Routine";
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
   SlewRateLimiter filterX = new SlewRateLimiter(3); 
@@ -1374,6 +1375,7 @@ public class Robot extends TimedRobot {
     autonRoutineChooser.addOption("12 Pt Alternative Routine",forthRoutine);
     autonRoutineChooser.addOption("12 Pt Alternative Routine 2",fifthRoutine);
     autonRoutineChooser.addOption("Big Points Routine",sixthRoutine);
+    autonRoutineChooser.addOption("Huge Points Routine",seventhRoutine);
 
     // Put the choosers on the SmartDashboard
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
@@ -1477,20 +1479,23 @@ public class Robot extends TimedRobot {
     // Execute the corresponding autonomous routine
     switch (autonRoutineChooser.getSelected()) {
       case secondRoutine:
-          secondAutonomousTimedRoutine();
-          break;
+        secondAutonomousTimedRoutine();
+        break;
       case thirdRoutine:
-          thirdAutonomousTimedRoutine();
-          break;
+        thirdAutonomousTimedRoutine();
+        break;
       case forthRoutine:
-          forthAutonomousTimedRoutine();
-          break;
+        forthAutonomousTimedRoutine();
+        break;
       case fifthRoutine:
-          fifthAutonomousTimedRoutine();
-          break;
+        fifthAutonomousTimedRoutine();
+        break;
       case sixthRoutine:
-          sixthAutonomousTimedRoutine();
-          break;      
+        sixthAutonomousTimedRoutine();
+        break;
+      case seventhRoutine:
+        seventhAutonomousTimedRoutine();
+        break;
       default:
           defaultAutonomousTimedRoutine();
           break;
