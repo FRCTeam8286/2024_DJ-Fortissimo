@@ -9,10 +9,13 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
+import edu.wpi.first.wpilibj.Encoder;
+import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
@@ -22,10 +25,19 @@ import java.util.ArrayList;
 
 import com.kauailabs.navx.frc.AHRS;
 
+import com.revrobotics.ColorMatchResult;
+import com.revrobotics.CANSparkLowLevel.MotorType;
+import com.revrobotics.CANSparkMax;
+import com.revrobotics.ColorMatch;
+import com.revrobotics.ColorSensorV3;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVPhysicsSim;
 import com.revrobotics.CANSparkBase.IdleMode;
+import com.revrobotics.ColorSensorV3;
+import com.revrobotics.ColorMatchResult;
+import com.revrobotics.ColorMatch;
+import com.revrobotics.RelativeEncoder;
 
 
 /**
@@ -68,15 +80,14 @@ public class Robot extends TimedRobot {
   /**
   * PWM Mapping:
   * - Blinkin LED Controller: PWM 1
-  * - Intake Hex Encoder (Through Bore): PWM 2
   */
 
   // PWM Channels
   private static final int blinkinPWMChannel = 1;
-  private static final int intakeHexEncoderPWMChannel = 2;
 
   // DIO Channels
   private static final int gamePieceDetectionSwitchDIOChannel = 1;
+  private static final int intakeHexEncoderDIOChannel = 2;
 
   // Movement Modifiers
   private static final double yModifier = 1;
@@ -176,6 +187,7 @@ public class Robot extends TimedRobot {
 
   private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;                           // Drive Motors
   private CANSparkMax leftShooterRoller, rightShooterRoller, intakeRoller, leftClimber, rightClimber;           // Interaction Motors
+  private RelativeEncoder leftClimberEncoder, rightClimberEncoder;
   private boolean isIntakeRunning = false;                                                                      // Intake Running Tracker
   private double intakeStartTime = Timer.getFPGATimestamp();                                                    // Start Time tracker
   private double intakeDuration = 0;
@@ -199,18 +211,16 @@ public class Robot extends TimedRobot {
   private double navxZeroStartTime = 0;
   private static double navxZeroIndicatorTime = 1;
 
-  // These are example values only - DO NOT USE THESE FOR YOUR OWN ROBOT!
-  // These characterization values MUST be determined either experimentally or theoretically
-  // for *your* robot's drive.
-  // The Robot Characterization Toolsuite provides a convenient tool for obtaining these
-  // values for your robot.
-  public static final double ksVolts = 0.22;
-  public static final double kvVoltSecondsPerMeter = 1.98;
-  public static final double kaVoltSecondsSquaredPerMeter = 0.2;
+  //Color Sensor Code
+  private final I2C.Port i2cPort = I2C.Port.kOnboard;
+  private final ColorSensorV3 colorSensor = new ColorSensorV3(i2cPort);
+  private final ColorMatch colorMatcher = new ColorMatch();
+  private final Color kBlueTarget = new Color(0.143, 0.427, 0.429);
+  private final Color kGreenTarget = new Color(0.197, 0.561, 0.240);
+  private final Color kRedTarget = new Color(0.561, 0.232, 0.114);
+  private final Color kYellowTarget = new Color(0.361, 0.524, 0.113);
+  private final Color kPurpleTarget = new Color(0.262, 0.394, 0.344);
 
-  // Example value only - as above, this must be tuned for your drive!
-  public static final double kPDriveVel = 8.5;
-  
   private void SetLEDColor(int desiredColor) {    
     /**The robot can be in a few states, with corresponding LED colors
    * 
@@ -273,6 +283,9 @@ public class Robot extends TimedRobot {
     intakeRoller = new CANSparkMax(intakeRollerMotorCANID, MotorType.kBrushless);
     leftClimber = new CANSparkMax(leftClimberMotorCANID, MotorType.kBrushless);
     rightClimber = new CANSparkMax(rightClimberMotorCANID, MotorType.kBrushless);
+    leftClimberEncoder = leftClimber.getEncoder();
+    rightClimberEncoder = rightClimber.getEncoder();
+
     intakeArm = new CANSparkMax(intakeArmPivitMotorCANID, MotorType.kBrushless);        
   
     // Configure initial motor settings (e.g., inversion)      
@@ -413,7 +426,7 @@ public class Robot extends TimedRobot {
   // Constructor
   private void IntakeArmInit() {
     // Intake Arm one time code
-    intakeHexEncoder = new DutyCycleEncoder(intakeHexEncoderPWMChannel);
+    intakeHexEncoder = new DutyCycleEncoder(intakeHexEncoderDIOChannel);
   }
 
   private void MoveIntakeArmUp(double speed) {
@@ -421,8 +434,6 @@ public class Robot extends TimedRobot {
     if (debug) {
       // Output Motor Values to Smart Dashboard for troubleshooting
       SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
-      SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
-      SmartDashboard.putNumber("Intake Arm Hex Encoder Absolate Position", intakeHexEncoder.getAbsolutePosition());
     }
   }
 
@@ -431,8 +442,6 @@ public class Robot extends TimedRobot {
     if (debug) {
       // Output Motor Values to Smart Dashboard for troubleshooting
       SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
-      SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
-      SmartDashboard.putNumber("Intake Arm Hex Encoder Absolute Position", intakeHexEncoder.getAbsolutePosition());
     }
   }
   private void StopIntakeArm() {
@@ -440,8 +449,6 @@ public class Robot extends TimedRobot {
     if (debug) {
       // Output Motor Values to Smart Dashboard for troubleshooting
       SmartDashboard.putNumber("Intake Arm Motor", intakeArm.getAppliedOutput());
-      SmartDashboard.putNumber("Intake Arm Hex Encoder Position", intakeHexEncoder.get());
-      SmartDashboard.putNumber("Intake Arm Hex Encoder Absolute Position", intakeHexEncoder.getAbsolutePosition());
     }
   }
 
@@ -460,7 +467,7 @@ public class Robot extends TimedRobot {
         timedIntakeArmUp(armAmpSpeakerPositionTime);
         break;
       default:
-        timedIntakeArmUp(armIntakeSpeakerPositionTime);
+        // timedIntakeArmUp(armIntakeSpeakerPositionTime);
         break;
     }
     IntakeArmPosition = 2;
@@ -502,7 +509,7 @@ public class Robot extends TimedRobot {
         timedIntakeArmDown(armIntakeSpeakerPositionTime);
         break;
       default:
-        timedIntakeArmDown(armIntakeSpeakerPositionTime);
+        // timedIntakeArmDown(armIntakeSpeakerPositionTime);
         break;        
     }
     IntakeArmPosition = 0;
@@ -523,6 +530,13 @@ public class Robot extends TimedRobot {
   }
 
   private void IntakeArmPeriodic(){
+    Color detectedColor = colorSensor.getColor();
+    ColorMatchResult match = colorMatcher.matchClosestColor(detectedColor);
+    if (intakeHexEncoder.getAbsolutePosition() > 0.50) {
+      IntakeArmPosition = 2;
+    } else if (intakeHexEncoder.getAbsolutePosition() < 0.12) {
+      IntakeArmPosition = 0;
+    }
     // This should run every cycle to ensure the intake arm is or isn't running as expected
     if ((Timer.getFPGATimestamp() - intakeArmStartTime) < intakeArmDuration) {        
       // Starts intake motors and schedules it to stop after a duration
@@ -633,18 +647,18 @@ public class Robot extends TimedRobot {
 
 
     // Raising and Lowering Climber 
-    if (xboxInteractionController.getYButtonPressed()) {
-      MoveClimbers(-climberSpeed);
-    } else if (xboxInteractionController.getYButtonReleased()){
-      StopClimbers();
-    } 
-    // Raising and Lowering Climber 
-    if (xboxInteractionController.getXButtonPressed()) {
-      MoveClimbers(climberSpeed);
-    } else if (xboxInteractionController.getXButtonReleased()){
-      StopClimbers();
-    } 
-  }
+      if (xboxInteractionController.getPOV() == 0) {
+        if ((leftClimberEncoder.getPosition() > -207 && rightClimberEncoder.getPosition() > -220)){
+          MoveClimbers(-climberSpeed);
+        }
+      } else if (xboxInteractionController.getPOV() == 180 ) {
+        if ((leftClimberEncoder.getPosition() < -10 && rightClimberEncoder.getPosition() < -10)){
+          MoveClimbers(climberSpeed);
+        }
+      } else {
+        StopClimbers();
+      } 
+    }
 
   private void InteractionPeriodic() { 
     ShooterRollerPeriodic();
@@ -831,6 +845,7 @@ public class Robot extends TimedRobot {
 
   private void fifthAutonomousTimedRoutine() {
     if (debug) { SmartDashboard.putString("Autonomous Routine", "fifthAutonomousTimedRoutine");}
+    ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
     switch (autonPhase){
       case 0:
         if (autonInitPhase) {
@@ -1037,11 +1052,12 @@ public class Robot extends TimedRobot {
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
           stopIntake();
+          IntakeArmSpeakerPosition();
           DrivePerodic(true, -0.86*autonSpeed, 0.5*autonSpeed, 0, navx);
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   
-        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(6)) > (phaseStartTimes.get(6) - phaseStartTimes.get(5))) { // Condition to move into next phase
+        if (((Timer.getFPGATimestamp() - phaseStartTimes.get(6))-0.25) > (phaseStartTimes.get(6) - phaseStartTimes.get(5))) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1088,14 +1104,220 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 10:
-        DrivePerodic(true, 0, 0, 0, navx);
+        DrivePerodic(true, autonSpeed, 0, 0, navx);
         break;
     }
   }
-
+  private void seventhAutonomousTimedRoutine() {
+    double autonSpeed = 0.15;
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "seventhAutonomousTimedRoutine");}
+    switch (autonPhase){
+      case 0: // Phase Number
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          TimedShooter(shooterTime);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(0) > shooterDuration) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 1: 
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          IntakeArmIntakePosition();
+          DrivePerodic(true, autonSpeed, 0, .0, navx); 
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        runIntake(intakeSpeed);
+        if (isGamePieceLoaded) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 2:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          IntakeArmSpeakerPosition();
+          DrivePerodic(true, -autonSpeed, 0, .0, navx); 
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(2)) > ((phaseStartTimes.get(2) - phaseStartTimes.get(1)))) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 3:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          DrivePerodic(true, 0, 0, .0, navx);
+          TimedShooter(shooterTime);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        System.out.println("Time So far: " + (Timer.getFPGATimestamp() - phaseStartTimes.get(0)) + " Seconds");
+        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(3)) > shooterDuration) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 4:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          DrivePerodic(true, 0.86*autonSpeed, -0.5*autonSpeed, -.15, navx); 
+          IntakeArmIntakePosition();
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   \
+        if (navx.getRotation2d().getDegrees() > 34) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 5:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          DrivePerodic(true, 0.86*autonSpeed, -0.5*autonSpeed, 0, navx);
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        runIntake(intakeSpeed);
+        if (isGamePieceLoaded) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 6:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          stopIntake();
+          IntakeArmSpeakerPosition();
+          DrivePerodic(true, -0.86*autonSpeed, 0.5*autonSpeed, 0, navx);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        if (((Timer.getFPGATimestamp() - phaseStartTimes.get(6))-0.25) > (phaseStartTimes.get(6) - phaseStartTimes.get(5))) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 7:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          DrivePerodic(true, -0.86*autonSpeed, 0.5*autonSpeed, 0.15, navx);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        if (navx.getRotation2d().getDegrees() < 0) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 8:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          DrivePerodic(true, 0, 0, 0, navx);
+          TimedShooter(shooterTime);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically 
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(8) > 0.75) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed        
+      case 9:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          DrivePerodic(true, 0.86*autonSpeed, 0.5*autonSpeed, .15, navx); 
+          IntakeArmIntakePosition();
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   \
+        if (navx.getRotation2d().getDegrees() < -34) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 10:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          DrivePerodic(true, 0.86*autonSpeed, 0.5*autonSpeed, 0, navx);
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        runIntake(intakeSpeed);
+        if (isGamePieceLoaded) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 11:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          stopIntake();
+          IntakeArmSpeakerPosition();
+          DrivePerodic(true, -0.86*autonSpeed, -0.5*autonSpeed, 0, navx);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        if (((Timer.getFPGATimestamp() - phaseStartTimes.get(6))-0.25) > (phaseStartTimes.get(6) - phaseStartTimes.get(5))) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 12:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          DrivePerodic(true, -0.86*autonSpeed, -0.5*autonSpeed, -0.15, navx);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically   
+        if (navx.getRotation2d().getDegrees() > 0) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 13:
+        if (autonInitPhase) { // Setup if statement for one time auton
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
+          DrivePerodic(true, 0, 0, 0, navx);
+          TimedShooter(shooterTime);
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        // Stuff to do periodically 
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(8) > 0.75) { // Condition to move into next phase
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 14:
+        DrivePerodic(true,autonSpeed,0,0,navx);
+        break;
+    }
+  }
   private void templateAutonomousRoutine() {
     if (debug) { SmartDashboard.putString("Autonomous Routine", "templateAutonomousTimedRoutine");}
     boolean autonInitPhase = true;
+    ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
     switch (autonPhase){
       case 0: // Phase Number
         if (autonInitPhase) { // Setup if statement for one time auton
@@ -1132,6 +1354,11 @@ public class Robot extends TimedRobot {
     IntakeArmInit();
     StopClimbers();
 
+    colorMatcher.addColorMatch(kBlueTarget);
+    colorMatcher.addColorMatch(kGreenTarget);
+    colorMatcher.addColorMatch(kRedTarget);
+    colorMatcher.addColorMatch(kYellowTarget); 
+    colorMatcher.addColorMatch(kPurpleTarget);  
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
     xboxInteractionController = new XboxController(1);  // Replace 1 with the port number of your interaction Xbox controller
@@ -1179,6 +1406,44 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
+    Color detectedColor = colorSensor.getColor();
+
+    /**
+     * Run the color match algorithm on our detected color
+     */
+    String colorString;
+    ColorMatchResult match = colorMatcher.matchClosestColor(detectedColor);
+
+    if (match.color == kBlueTarget) {
+      colorString = "Blue";
+    } else if (match.color == kRedTarget) {
+      colorString = "Red";
+    } else if (match.color == kGreenTarget) {
+      colorString = "Green";
+    } else if (match.color == kYellowTarget) {
+      colorString = "Yellow";
+    } else if (match.color == kPurpleTarget) {
+      colorString = "Purple";
+    } else {
+      colorString = "Unknown";
+    }
+    if (debug) {
+      SmartDashboard.putNumber("Left Climber Encoder Position", leftClimberEncoder.getPosition());
+      SmartDashboard.putNumber("Right Climber Encoder Position", rightClimberEncoder.getPosition());
+      SmartDashboard.putNumber("Intake Arm Value", intakeHexEncoder.get());
+      SmartDashboard.putNumber("Intake Arm Absolute Value", intakeHexEncoder.getAbsolutePosition());
+    }
+
+    /**
+     * Open Smart Dashboard or Shuffleboard to see the color detected by the 
+     * sensor.
+     */
+    SmartDashboard.putNumber("Red", detectedColor.red);
+    SmartDashboard.putNumber("Green", detectedColor.green);
+    SmartDashboard.putNumber("Blue", detectedColor.blue);
+    SmartDashboard.putNumber("Confidence", match.confidence);
+    SmartDashboard.putString("Detected Color", colorString);
+    SmartDashboard.putString("Raw Color", colorSensor.getCIEColor().toString());
 
   }
 
@@ -1279,8 +1544,6 @@ public class Robot extends TimedRobot {
       SmartDashboard.putNumber("Current X Value", xAxisValue);
       SmartDashboard.putNumber("Current Y Value", yAxisValue);
       SmartDashboard.putNumber("Current Z Value", zAxisValue);
-      SmartDashboard.putNumber("Current getAbsolutePosition", intakeHexEncoder.getAbsolutePosition());
-      SmartDashboard.putNumber("Current intakehexget", intakeHexEncoder.get());
       // Output Ahrs value to Smart Dashboard for troubleshooting
       SmartDashboard.putNumber("Current ahrs Rotation", navx.getRotation2d().getDegrees());
 
