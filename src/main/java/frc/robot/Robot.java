@@ -1113,7 +1113,10 @@ public class Robot extends TimedRobot {
     double autonSpeed = 0.20;
     if (debug) { SmartDashboard.putString("Autonomous Routine", "seventhAutonomousTimedRoutine");}
     switch (autonPhase){
-      case 0: // Phase Number
+      case 0: 
+        /*
+         * Phase 0: Runs Shooter until it's been as long as the shooter takes to run
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1127,6 +1130,9 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 1: 
+        /*
+         * Phase 1: back up and run intake
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1134,17 +1140,17 @@ public class Robot extends TimedRobot {
           DrivePerodic(true, autonSpeed, 0, .0, navx); 
           autonInitPhase = false; // Get out of Init Phase
         }
-        // Stuff to do periodically  
-           
-        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(1)) > 0.2) {
-          runIntake(intakeSpeed);
-        }
+        // Stuff to do periodically 
+        runIntake(intakeSpeed);
         if (isGamePieceLoaded) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
         break; // Ensure execution stops here if this case is processed
       case 2:
+        /*
+         * Phase 2: Drive Forward for as long as it took to drive backwards in the previous phase
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1159,6 +1165,9 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 3:
+        /*
+         * Phase 3: Stop moving and run shooter
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1174,6 +1183,11 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 4:
+        /*
+         * Phase 4: Put intake arm into intake position, 
+         *          move diagnally and rotate until robot 
+         *          is at 34 degrees. 
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           DrivePerodic(true, 0.86*autonSpeed, -0.5*autonSpeed, -.15, navx); 
@@ -1188,6 +1202,10 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 5:
+        /*
+         * Phase 5: Move diagnally, run intake, 
+         *          and stop once a game piece is loaded
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           DrivePerodic(true, 0.86*autonSpeed, -0.5*autonSpeed, 0, navx);
@@ -1202,6 +1220,11 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 6:
+        /*
+         * Phase 6: Bring intake arm into speaker position, 
+         *          drive back diagnally for as long as it 
+         *          took in the previous phase
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1217,6 +1240,10 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 7:
+        /*
+         * Phase 7: move back diagnally and rotate until 
+         *          we are at less than 0 degrees
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1230,6 +1257,10 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 8:
+        /*
+         * Phase 8: Stop moving and run shooter 
+         *          for the shooter duration
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1244,6 +1275,10 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed        
       case 9:
+        /*
+         * Phase 9: Bring intake arm out to intake position and move diagnally 
+         * twards the other piece, while rotating until we hit -34 degress
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           DrivePerodic(true, 0.86*autonSpeed, 0.5*autonSpeed, .15, navx); 
@@ -1258,6 +1293,10 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 10:
+        /*
+         * Phase 10: just move diagnally and run intake
+        *            until a game piece is loaded
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           DrivePerodic(true, 0.86*autonSpeed, 0.5*autonSpeed, 0, navx);
@@ -1272,6 +1311,12 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 11:
+         /*
+         * Phase 11: Stop intake, put arm in speaker position
+         *           drive back to speaker diagnally
+         *           and move on once it's been as long as 
+         *           it look in the last phase
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1287,6 +1332,10 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 12:
+         /*
+         * Phase 12: Rotate and move diagnally until 
+         *           the robot is past 0 degrees
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1294,12 +1343,16 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   
-        if (navx.getRotation2d().getDegrees() > 0) { // Condition to move into next phase
+        if (navx.getRotation2d().getDegrees() > -5) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
         break; // Ensure execution stops here if this case is processed
       case 13:
+         /*
+         * Phase 13: Stop moving, run shooter and
+         *           move on once it's done
+         */
         if (autonInitPhase) { // Setup if statement for one time auton
           phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
@@ -1314,6 +1367,9 @@ public class Robot extends TimedRobot {
         }
         break; // Ensure execution stops here if this case is processed
       case 14:
+         /*
+         * Phase 14: move back
+         */
         DrivePerodic(true,autonSpeed,0,0,navx);
         break;
     }
