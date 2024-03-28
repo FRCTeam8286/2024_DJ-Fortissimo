@@ -1134,8 +1134,11 @@ public class Robot extends TimedRobot {
           DrivePerodic(true, autonSpeed, 0, .0, navx); 
           autonInitPhase = false; // Get out of Init Phase
         }
-        // Stuff to do periodically   
-        runIntake(intakeSpeed);
+        // Stuff to do periodically  
+           
+        if ((Timer.getFPGATimestamp() - phaseStartTimes.get(1)) > 0.2) {
+          runIntake(intakeSpeed);
+        }
         if (isGamePieceLoaded) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
@@ -1191,7 +1194,7 @@ public class Robot extends TimedRobot {
           if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");} // Let us know which phase we're on
           autonInitPhase = false; // Get out of Init Phase
         }
-        // Stuff to do periodically   
+        // Stuff to do periodically
         runIntake(intakeSpeed);
         if (isGamePieceLoaded) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
