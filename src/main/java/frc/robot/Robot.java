@@ -1278,7 +1278,7 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   
-        if (((Timer.getFPGATimestamp() - phaseStartTimes.get(6))-0.25) > (phaseStartTimes.get(6) - phaseStartTimes.get(5))) { // Condition to move into next phase
+        if (((Timer.getFPGATimestamp() - phaseStartTimes.get(11))-0.25) > (phaseStartTimes.get(11) - phaseStartTimes.get(10))) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1372,7 +1372,6 @@ public class Robot extends TimedRobot {
     autonRoutineChooser.addOption("12 Pt Routine",DefaultAuto);
     autonRoutineChooser.addOption("2 Pt Routine",secondRoutine);
     autonRoutineChooser.addOption("5 Pt Routine",thirdRoutine);
-    autonRoutineChooser.addOption("12 Pt Alternative Routine",forthRoutine);
     autonRoutineChooser.addOption("12 Pt Alternative Routine 2",fifthRoutine);
     autonRoutineChooser.addOption("Big Points Routine",sixthRoutine);
     autonRoutineChooser.addOption("Huge Points Routine",seventhRoutine);
