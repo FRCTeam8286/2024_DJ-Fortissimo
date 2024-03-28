@@ -1110,7 +1110,7 @@ public class Robot extends TimedRobot {
     }
   }
   private void seventhAutonomousTimedRoutine() {
-    double autonSpeed = 0.15;
+    double autonSpeed = 0.20;
     if (debug) { SmartDashboard.putString("Autonomous Routine", "seventhAutonomousTimedRoutine");}
     switch (autonPhase){
       case 0: // Phase Number
@@ -1208,7 +1208,7 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   
-        if (((Timer.getFPGATimestamp() - phaseStartTimes.get(6))-0.25) > (phaseStartTimes.get(6) - phaseStartTimes.get(5))) { // Condition to move into next phase
+        if (((Timer.getFPGATimestamp() - phaseStartTimes.get(6))-0.5) > (phaseStartTimes.get(6) - phaseStartTimes.get(5))) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1305,7 +1305,7 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically 
-        if (Timer.getFPGATimestamp() - phaseStartTimes.get(8) > 0.75) { // Condition to move into next phase
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(13) > 0.75) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
