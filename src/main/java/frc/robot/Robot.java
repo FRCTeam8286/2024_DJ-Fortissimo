@@ -999,7 +999,7 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   \
-        if (navx.getRotation2d().getDegrees() > 34) { // Condition to move into next phase
+        if (navx.getRotation2d().getDegrees() > 38) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1414,7 +1414,7 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   \
-        if (navx.getRotation2d().getDegrees() > -34) { // Condition to move into next phase
+        if (navx.getRotation2d().getDegrees() > -38) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
