@@ -9,13 +9,10 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.wpilibj.DigitalInput;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
-import edu.wpi.first.wpilibj.Encoder;
-import edu.wpi.first.wpilibj.I2C;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.motorcontrol.PWMSparkMax;
 import edu.wpi.first.wpilibj.smartdashboard.SendableChooser;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.util.Color;
 import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
@@ -25,18 +22,10 @@ import java.util.ArrayList;
 
 import com.kauailabs.navx.frc.AHRS;
 
-import com.revrobotics.ColorMatchResult;
-import com.revrobotics.CANSparkLowLevel.MotorType;
-import com.revrobotics.CANSparkMax;
-import com.revrobotics.ColorMatch;
-import com.revrobotics.ColorSensorV3;
 import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVPhysicsSim;
 import com.revrobotics.CANSparkBase.IdleMode;
-import com.revrobotics.ColorSensorV3;
-import com.revrobotics.ColorMatchResult;
-import com.revrobotics.ColorMatch;
 import com.revrobotics.RelativeEncoder;
 
 
@@ -212,16 +201,6 @@ public class Robot extends TimedRobot {
   private double navxZeroStartTime = 0;
   private static double navxZeroIndicatorTime = 1;
 
-  //Color Sensor Code
-  private final I2C.Port i2cPort = I2C.Port.kOnboard;
-  private final ColorSensorV3 colorSensor = new ColorSensorV3(i2cPort);
-  private final ColorMatch colorMatcher = new ColorMatch();
-  private final Color kBlueTarget = new Color(0.143, 0.427, 0.429);
-  private final Color kGreenTarget = new Color(0.197, 0.561, 0.240);
-  private final Color kRedTarget = new Color(0.561, 0.232, 0.114);
-  private final Color kYellowTarget = new Color(0.361, 0.524, 0.113);
-  private final Color kPurpleTarget = new Color(0.262, 0.394, 0.344);
-
   private void SetLEDColor(int desiredColor) {    
     /**The robot can be in a few states, with corresponding LED colors
    * 
@@ -306,22 +285,12 @@ public class Robot extends TimedRobot {
   private void runIntake(double speed) {
     // Sets intake motor speeds; positive values intake, negative values expel
     intakeRoller.set(speed);
-    if (debug) {
-
-        // output value to smart dashboard
-        SmartDashboard.putNumber("Current Intake Roller Motor Value", intakeRoller.getAppliedOutput());
-    }
   }
 
   private void stopIntake() {
       // Stops the intake motors
       intakeRoller.set(0);    
       isIntakeRunning = false;   
-      if (debug) {
-
-          // output value to smart dashboard
-          SmartDashboard.putNumber("Current Intake Roller Motor Value", intakeRoller.getAppliedOutput());
-      }
   }
 
   private void timedIntake(double duration) {
@@ -333,6 +302,8 @@ public class Robot extends TimedRobot {
 
   private void IntakeRollerPeriodic(){
     // This should run every cycle to ensure the intake roller is or isn't running as expected
+    
+    SmartDashboard.putNumber("Intake Motor Applied Output", intakeRoller.getAppliedOutput());
     if (isShooterRunning == false) {
       if (isGamePieceLoaded == true){
         intakeStartTime = 0;
@@ -531,13 +502,11 @@ public class Robot extends TimedRobot {
   }
 
   private void IntakeArmPeriodic(){
-    Color detectedColor = colorSensor.getColor();
-    ColorMatchResult match = colorMatcher.matchClosestColor(detectedColor);
-    if (intakeHexEncoder.getAbsolutePosition() > 0.50) {
+    /* if (intakeHexEncoder.getAbsolutePosition() > 0.50) {
       IntakeArmPosition = 2;
     } else if (intakeHexEncoder.getAbsolutePosition() < 0.12) {
       IntakeArmPosition = 0;
-    }
+    } */
     // This should run every cycle to ensure the intake arm is or isn't running as expected
     if ((Timer.getFPGATimestamp() - intakeArmStartTime) < intakeArmDuration) {        
       // Starts intake motors and schedules it to stop after a duration
@@ -642,9 +611,9 @@ public class Robot extends TimedRobot {
       IntakeArmSpeakerPosition();
     } else if (xboxInteractionController.getBButtonPressed()) {
       IntakeArmIntakePosition();
-    } else if (xboxInteractionController.getStartButtonPressed()) {
+    } /* else if (xboxInteractionController.getStartButtonPressed()) {
       IntakeArmAmpPosition();
-    } 
+    } */
 
 
     // Raising and Lowering Climber 
@@ -1196,7 +1165,7 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   \
-        if (navx.getRotation2d().getDegrees() > 34) { // Condition to move into next phase
+        if (navx.getRotation2d().getDegrees() > 38) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1287,7 +1256,7 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   \
-        if (navx.getRotation2d().getDegrees() < -34) { // Condition to move into next phase
+        if (navx.getRotation2d().getDegrees() < -38) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1413,12 +1382,6 @@ public class Robot extends TimedRobot {
     InteractionSystemInit();
     IntakeArmInit();
     StopClimbers();
-
-    colorMatcher.addColorMatch(kBlueTarget);
-    colorMatcher.addColorMatch(kGreenTarget);
-    colorMatcher.addColorMatch(kRedTarget);
-    colorMatcher.addColorMatch(kYellowTarget); 
-    colorMatcher.addColorMatch(kPurpleTarget);  
     // Initiate Xbox Controllers
     xboxMovementController = new XboxController(0);  // Replace 0 with the port number of your movement Xbox controller
     xboxInteractionController = new XboxController(1);  // Replace 1 with the port number of your interaction Xbox controller
@@ -1466,44 +1429,13 @@ public class Robot extends TimedRobot {
    */
   @Override
   public void robotPeriodic() {
-    Color detectedColor = colorSensor.getColor();
-
-    /**
-     * Run the color match algorithm on our detected color
-     */
-    String colorString;
-    ColorMatchResult match = colorMatcher.matchClosestColor(detectedColor);
-
-    if (match.color == kBlueTarget) {
-      colorString = "Blue";
-    } else if (match.color == kRedTarget) {
-      colorString = "Red";
-    } else if (match.color == kGreenTarget) {
-      colorString = "Green";
-    } else if (match.color == kYellowTarget) {
-      colorString = "Yellow";
-    } else if (match.color == kPurpleTarget) {
-      colorString = "Purple";
-    } else {
-      colorString = "Unknown";
-    }
+    
     if (debug) {
       SmartDashboard.putNumber("Left Climber Encoder Position", leftClimberEncoder.getPosition());
       SmartDashboard.putNumber("Right Climber Encoder Position", rightClimberEncoder.getPosition());
       SmartDashboard.putNumber("Intake Arm Value", intakeHexEncoder.get());
       SmartDashboard.putNumber("Intake Arm Absolute Value", intakeHexEncoder.getAbsolutePosition());
     }
-
-    /**
-     * Open Smart Dashboard or Shuffleboard to see the color detected by the 
-     * sensor.
-     */
-    SmartDashboard.putNumber("Red", detectedColor.red);
-    SmartDashboard.putNumber("Green", detectedColor.green);
-    SmartDashboard.putNumber("Blue", detectedColor.blue);
-    SmartDashboard.putNumber("Confidence", match.confidence);
-    SmartDashboard.putString("Detected Color", colorString);
-    SmartDashboard.putString("Raw Color", colorSensor.getCIEColor().toString());
 
   }
 
