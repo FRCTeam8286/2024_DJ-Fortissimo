@@ -17,6 +17,7 @@ import edu.wpi.first.wpilibj.SPI;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.XboxController;
+import edu.wpi.first.cameraserver.CameraServer;
 
 import java.util.ArrayList;
 
@@ -27,7 +28,6 @@ import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVPhysicsSim;
 import com.revrobotics.CANSparkBase.IdleMode;
 import com.revrobotics.RelativeEncoder;
-
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -146,7 +146,7 @@ public class Robot extends TimedRobot {
   private int IntakeArmPosition = 2; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
 
   private static final String DefaultAuto = "12 Pt. Routine";
-  private static final String secondRoutine = "2 Pt. Routine";
+  private static final String secondRoutine = "7 Pt. Routine";
   private static final String thirdRoutine = "6 Pt. Routine";
   private static final String forthRoutine = "12 Pt. Alternitive Routine";
   private static final String fifthRoutine = "12 Pt. Alternitive Routine Alt";
@@ -743,11 +743,13 @@ public class Robot extends TimedRobot {
      * Move back for 5 seconds
      * Stop
      */
-    if (debug) { SmartDashboard.putString("Autonomous Routine", "secondAutonomousTimedRoutine");}
-    if (autonomousElapsedTime < 5 ) {
-      DrivePerodic(true, .17, 0, 0, navx);
-    } else {
-      DrivePerodic(true, .0, 0, 0, navx);
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "defaultAutonomousTimedRoutine");}
+    if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
+      TimedShooter(shooterTime);
+    } else if (autonomousElapsedTime >=2 && autonomousElapsedTime < 5) {
+      if (!isGamePieceLoaded) {
+        DrivePerodic(true, .13, 0, 0, navx);
+      }
     }
   }
 
@@ -1527,7 +1529,7 @@ public class Robot extends TimedRobot {
   public void robotInit() {
     // If debug mode is on, write a line that lets us know what mode we're entering
     if (debug) { System.out.println("Entering robotInit Phase");}
-    
+    CameraServer.startAutomaticCapture("Intake Cam", 0);
     // Call on the constructor methods
     DriveTrainInit();
     InteractionSystemInit();
@@ -1543,7 +1545,7 @@ public class Robot extends TimedRobot {
 
     // Add otpions to the Autonomus Chooser
     autonRoutineChooser.addOption("12 Pt Routine",DefaultAuto);
-    autonRoutineChooser.addOption("2 Pt Routine",secondRoutine);
+    autonRoutineChooser.addOption("7 Pt Routine",secondRoutine);
     autonRoutineChooser.addOption("5 Pt Routine",thirdRoutine);
     autonRoutineChooser.addOption("12 Pt Alternative Routine 2",fifthRoutine);
     autonRoutineChooser.addOption("Big (17) Points Routine",sixthRoutine);
