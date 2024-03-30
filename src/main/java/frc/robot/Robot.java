@@ -76,7 +76,6 @@ public class Robot extends TimedRobot {
 
   // DIO Channels
   private static final int gamePieceDetectionSwitchDIOChannel = 1;
-  private static final int intakeHexEncoderDIOChannel = 2;
 
   // Movement Modifiers
   private static final double yModifier = 1;
@@ -140,10 +139,6 @@ public class Robot extends TimedRobot {
 
   // isGamePieceLoaded Variable
   private boolean isGamePieceLoaded;  
-  
-  // Variables related to intake pivoting arm
-  private CANSparkMax intakeArm;
-  private int IntakeArmPosition = 2; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
 
   private static final String DefaultAuto = "12 Pt. Routine";
   private static final String secondRoutine = "7 Pt. Routine";
@@ -159,9 +154,6 @@ public class Robot extends TimedRobot {
   SlewRateLimiter filterY = new SlewRateLimiter(3);
   SlewRateLimiter filterZ = new SlewRateLimiter(3);
 
-  // Create Duty Cycle encoder object for the through bore enocder
-  private DutyCycleEncoder intakeHexEncoder;
-
   // Setup LED PWM Outputs
   public static final double ledRed = 0.61;
   public static final double ledOrange = 0.65;
@@ -176,11 +168,20 @@ public class Robot extends TimedRobot {
   private double autonomousStartTime;
   private double autonomousElapsedTime;
 
-  private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;                           // Drive Motors
-  private CANSparkMax leftShooterRoller, rightShooterRoller, intakeRoller, leftClimber, rightClimber;           // Interaction Motors
-  private RelativeEncoder leftClimberEncoder, rightClimberEncoder;
-  private boolean isIntakeRunning = false;                                                                      // Intake Running Tracker
-  private double intakeStartTime = Timer.getFPGATimestamp();                                                    // Start Time tracker
+  // Objects representing Motors and their encoders
+  private CANSparkMax leftFrontMotor, leftBackMotor, rightFrontMotor, rightBackMotor;
+  private RelativeEncoder leftFrontEncoder, leftBackEncoder, rightFrontEncoder, rightBackEncoder;
+  private CANSparkMax leftShooterRoller, rightShooterRoller, intakeRoller, leftClimber, rightClimber;
+  private RelativeEncoder leftShooterRollerEncoder, rightShooterRollerEncoder, intakeRollerEncoder, leftClimberEncoder, rightClimberEncoder;
+  
+  
+  // Intake Arm Objects
+  private CANSparkMax intakeArm;
+  private RelativeEncoder intakeArmEncoder;
+  private int IntakeArmPosition = 2; // 0 = Intake Position, 1 = Amp Position, 2 = Speaker Position
+
+  private boolean isIntakeRunning = false; // Intake Running Tracker
+  private double intakeStartTime = Timer.getFPGATimestamp(); // Start Time tracker
   private double intakeDuration = 0;
 
   private boolean isShooterRunning = false;  
@@ -399,7 +400,7 @@ public class Robot extends TimedRobot {
   // Constructor
   private void IntakeArmInit() {
     // Intake Arm one time code
-    intakeHexEncoder = new DutyCycleEncoder(intakeHexEncoderDIOChannel);
+    intakeRollerEncoder = intakeArm.getEncoder();
   }
 
   private void MoveIntakeArmUp(double speed) {
@@ -503,11 +504,13 @@ public class Robot extends TimedRobot {
   }
 
   private void IntakeArmPeriodic(){
-    /* if (intakeHexEncoder.getAbsolutePosition() > 0.50) {
+    // Adjust Intake Arm Position based on readings from Enocder
+    if (intakeArmEncoder.getPosition() > 0.25) {
       IntakeArmPosition = 2;
-    } else if (intakeHexEncoder.getAbsolutePosition() < 0.12) {
+    } else if (intakeArmEncoder.getPosition() < 0.10) {
       IntakeArmPosition = 0;
-    } */
+    }
+
     // This should run every cycle to ensure the intake arm is or isn't running as expected
     if ((Timer.getFPGATimestamp() - intakeArmStartTime) < intakeArmDuration) {        
       // Starts intake motors and schedules it to stop after a duration
@@ -612,9 +615,9 @@ public class Robot extends TimedRobot {
       IntakeArmSpeakerPosition();
     } else if (xboxInteractionController.getBButtonPressed()) {
       IntakeArmIntakePosition();
-    } /* else if (xboxInteractionController.getStartButtonPressed()) {
+    } else if (xboxInteractionController.getStartButtonPressed()) {
       IntakeArmAmpPosition();
-    } */
+    }
 
 
     // Raising and Lowering Climber 
@@ -1587,8 +1590,7 @@ public class Robot extends TimedRobot {
     if (debug) {
       SmartDashboard.putNumber("Left Climber Encoder Position", leftClimberEncoder.getPosition());
       SmartDashboard.putNumber("Right Climber Encoder Position", rightClimberEncoder.getPosition());
-      SmartDashboard.putNumber("Intake Arm Value", intakeHexEncoder.get());
-      SmartDashboard.putNumber("Intake Arm Absolute Value", intakeHexEncoder.getAbsolutePosition());
+      SmartDashboard.putNumber("Intake Arm Value", intakeArmEncoder.getPosition());
     }
 
   }
