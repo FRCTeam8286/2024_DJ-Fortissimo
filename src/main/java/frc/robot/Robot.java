@@ -665,15 +665,15 @@ public class Robot extends TimedRobot {
 
   /**
   * Controls the robot's movement based on joystick input and control mode.
-  * @param fieldCentricControl Determines if movement is relative to the field or robot.
+  * @param fieldCentric Determines if movement is relative to the field or robot.
   * @param yAxisValue Forward/reverse input.
   * @param xAxisValue Left/right input.
   * @param zAxisValue Rotation input.
   * @param ahrs The robot's gyroscope sensor for orientation.
   * @param debug Enables diagnostic output to SmartDashboard.
   */
-  private void DrivePerodic(boolean fieldCentricControl,double yAxisValue, double xAxisValue, double zAxisValue, AHRS ahrs) {      
-      if (fieldCentricControl){
+  private void DrivePerodic(boolean fieldCentric,double yAxisValue, double xAxisValue, double zAxisValue, AHRS ahrs) {      
+      if (fieldCentric){
           // Drive System Code from https://gm0.org/en/latest/docs/software/tutorials/mecanum-drive.html
           // Calculate movement based on robot orientation for field-centric control
           double botHeading = ahrs.getRotation2d().getRadians();

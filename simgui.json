@@ -15,6 +15,11 @@
         "header": {
           "open": false
         }
+      },
+      "navX-Sensor[0]": {
+        "header": {
+          "open": true
+        }
       }
     },
     "PWM Outputs": {
