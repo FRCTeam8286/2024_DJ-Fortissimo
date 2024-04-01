@@ -139,15 +139,16 @@ public class Robot extends TimedRobot {
 
   // isGamePieceLoaded Variable
   private boolean isGamePieceLoaded;  
+  private boolean isGamePieceLimitSwitchTriggured;
 
-  private static final String DefaultAuto = "12 Pt. Routine";
-  private static final String secondRoutine = "7 Pt. Routine";
-  private static final String thirdRoutine = "6 Pt. Routine";
-  private static final String forthRoutine = "12 Pt. Alternitive Routine";
-  private static final String fifthRoutine = "12 Pt. Alternitive Routine Alt";
-  private static final String sixthRoutine = "Big (17) Points Routine";
-  private static final String seventhRoutine = "Huge (22) Points Routine";
-  private static final String eighthRoutine = "Big (17 Left) Points Routine";
+  private static final String DefaultAuto = "1 - Front Speaker Position - 12 Point Routine";
+  private static final String secondRoutine = "2 - Any Valid Speaker Position - 7 Point Routine ";
+  private static final String thirdRoutine = "3 - Any Valid Speaker Position - 5 Point Routine";
+  private static final String forthRoutine = "4 - (untested) Left? Speaker Position - 12 Point alternative Routine";
+  private static final String fifthRoutine = "5 - (untested) Right? Speaker Position- 12 Point Alternate Routine";
+  private static final String sixthRoutine = "6 - Front Speaker Position- 17 Point Left Note Routine ";
+  private static final String seventhRoutine = "7 - Front Speaker Position- 22 Point Routine";
+  private static final String eighthRoutine = "8 - Front Speaker Position - 17 Point Right Note Routine";
 
   // Creates SlewRateLimiter objects for each axis that limits the rate of change. This value is max change per second. For most imports, the range here is  -1 to 1 
   SlewRateLimiter filterX = new SlewRateLimiter(3); 
@@ -307,8 +308,9 @@ public class Robot extends TimedRobot {
     
     SmartDashboard.putNumber("Intake Motor Applied Output", intakeRoller.getAppliedOutput());
     if (isShooterRunning == false) {
-      if (isGamePieceLoaded == true){
+      if (isGamePieceLimitSwitchTriggured == true){
         intakeStartTime = 0;
+        isGamePieceLoaded = true;
       }
 
       if ((Timer.getFPGATimestamp() - intakeStartTime) < intakeDuration) {        
@@ -328,6 +330,7 @@ public class Robot extends TimedRobot {
     rightShooterRoller.set(speed);
     if (spinup == false) {
       runIntake(-speed);
+      isGamePieceLoaded = false;
     }
     if (debug) {
       // output value to smart dashboard
@@ -400,7 +403,7 @@ public class Robot extends TimedRobot {
   // Constructor
   private void IntakeArmInit() {
     // Intake Arm one time code
-    intakeRollerEncoder = intakeArm.getEncoder();
+    intakeArmEncoder = intakeArm.getEncoder();
   }
 
   private void MoveIntakeArmUp(double speed) {
@@ -504,6 +507,7 @@ public class Robot extends TimedRobot {
   }
 
   private void IntakeArmPeriodic(){
+    SmartDashboard.putNumber("Intake Arm Value", intakeArmEncoder.getPosition());
     // Adjust Intake Arm Position based on readings from Enocder
     if (intakeArmEncoder.getPosition() > 0.25) {
       IntakeArmPosition = 2;
@@ -546,9 +550,9 @@ public class Robot extends TimedRobot {
 
   private void GamePieceDetectionPeriodic() {
     // This should run every cycle to check the game piece
-    isGamePieceLoaded = !gamePieceDetectionSwitch.get();  // Pulls the value returned fromt he Game Piece Detection Switch and sets it to isGamePieceLoaded variable
+    isGamePieceLimitSwitchTriggured = !gamePieceDetectionSwitch.get();  // Pulls the value returned fromt he Game Piece Detection Switch and sets it to isGamePieceLimitSwitchTriggured variable
     if (debug) {
-      SmartDashboard.putBoolean("Gamepiece Limit Switch", isGamePieceLoaded);
+      SmartDashboard.putBoolean("Gamepiece Limit Switch", isGamePieceLimitSwitchTriggured);
     }
   }
 
@@ -717,11 +721,11 @@ public class Robot extends TimedRobot {
     } else if (autonomousElapsedTime > 1.75 && autonomousElapsedTime < 1.80) {
       IntakeArmIntakePosition();
     } else if (autonomousElapsedTime >=2 && autonomousElapsedTime < 3.5) {
-      if (!isGamePieceLoaded) {
+      if (!isGamePieceLimitSwitchTriggured) {
         DrivePerodic(true, .13, 0, 0, navx);
         timedIntake(0.25);
       }
-      if (isGamePieceLoaded) {
+      if (isGamePieceLimitSwitchTriggured) {
         DrivePerodic(true, 0, 0, 0, navx); 
       }
     } if (autonomousElapsedTime >=3.5 && autonomousElapsedTime < 3.6){
@@ -746,11 +750,11 @@ public class Robot extends TimedRobot {
      * Move back for 5 seconds
      * Stop
      */
-    if (debug) { SmartDashboard.putString("Autonomous Routine", "defaultAutonomousTimedRoutine");}
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "secondAutonomousTimedRoutine");}
     if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
       TimedShooter(shooterTime);
     } else if (autonomousElapsedTime >=2 && autonomousElapsedTime < 5) {
-      if (!isGamePieceLoaded) {
+      if (!isGamePieceLimitSwitchTriggured) {
         DrivePerodic(true, .13, 0, 0, navx);
       }
     }
@@ -770,58 +774,7 @@ public class Robot extends TimedRobot {
   }
 
   private void forthAutonomousTimedRoutine() {
-    /*
-     * 12 Point Routine from left side speaker position
-     * =========================================
-     * 
-     * Shoot Loaded note
-     * move Arm to Intake Position
-     * Move Diag
-     * Drop Intake
-     * Rotate
-     * Move Forward
-     * Move back
-     * rotate back
-     * raise intake
-     * move diag
-     * Shoot loaded note
-     * move forword
-     * rotate
-     */
     if (debug) { SmartDashboard.putString("Autonomous Routine", "forthAutonomousTimedRoutine");}
-    if (autonomousElapsedTime > 1 && autonomousElapsedTime < 1.1) {
-      TimedShooter(shooterDuration);
-    } else if (autonomousElapsedTime > 1.85 && autonomousElapsedTime < 1.9) {
-      IntakeArmIntakePosition();
-    } else if (autonomousElapsedTime > 2 && autonomousElapsedTime < 2.5) {
-      DrivePerodic(true, .20, 0, 0, navx);
-    } else if (autonomousElapsedTime > 2.5 && autonomousElapsedTime < 3.0 && navx.getAngle() > -30) {
-      DrivePerodic(true, 0, 0, -0.25, navx);      
-    } else if (autonomousElapsedTime > 3 && autonomousElapsedTime < 3.1) {
-      IntakeArmSpeakerPosition();
-    } else if (autonomousElapsedTime > 3 && autonomousElapsedTime < 3.5) {
-      DrivePerodic(true, .20, -.20, 0, navx);
-      timedIntake(intakeTime);
-    } else if (autonomousElapsedTime > 3.5 && autonomousElapsedTime < 4) {
-      DrivePerodic(true, -.20, .20, 0, navx);
-    } else if (autonomousElapsedTime > 4 && autonomousElapsedTime < 4.5 && navx.getAngle() < 0) {
-      DrivePerodic(true, 0, 0, 0.25, navx);      
-    } else if (autonomousElapsedTime > 4.5 && autonomousElapsedTime < 5) {
-      DrivePerodic(true, -.20, 0, 0, navx);
-    } else if (autonomousElapsedTime > 5 && autonomousElapsedTime < 5.1) {
-      TimedShooter(shooterDuration);
-    } else if (autonomousElapsedTime > 5 && autonomousElapsedTime < 5.5) {
-      DrivePerodic(true, .20, 0.20, 0, navx); 
-    }else if (autonomousElapsedTime > 5.5 && autonomousElapsedTime < 6 && navx.getAngle() < 40) {
-      DrivePerodic(true, 0, 0, 0.25, navx); 
-    } else {
-      DrivePerodic(true, 0, 0, 0, navx); 
-    }
-  }
-
-  private void fifthAutonomousTimedRoutine() {
-    if (debug) { SmartDashboard.putString("Autonomous Routine", "fifthAutonomousTimedRoutine");}
-    ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
     switch (autonPhase){
       case 0:
         if (autonInitPhase) {
@@ -857,7 +810,7 @@ public class Robot extends TimedRobot {
         }
         DrivePerodic(true, .30, .30, 0, navx); // Move Diagnal 
         timedIntake(intakeTime);
-        if (isGamePieceLoaded == true) {
+        if (isGamePieceLimitSwitchTriggured == true) {
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -934,6 +887,120 @@ public class Robot extends TimedRobot {
     }
   }
 
+  private void fifthAutonomousTimedRoutine() {
+    if (debug) { SmartDashboard.putString("Autonomous Routine", "fifthAutonomousTimedRoutine");}
+    switch (autonPhase){
+      case 0:
+        if (autonInitPhase) {
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          TimedShooter(shooterDuration); // Run Shooter
+          autonInitPhase = false; // Get out of Init Phase
+        }
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(autonPhase) > shooterDuration) { // If this has been running longer than the shooter duration            
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+          if (debug) { System.out.println("Done");}
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 1:
+        if (autonInitPhase) {
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          IntakeArmIntakePosition();
+          autonInitPhase = false;
+        }
+        DrivePerodic(true, .30, -.30, -.30, navx); // Move Diagnal and rotate
+        if (navx.getRotation2d().getDegrees() < -50) {
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 2:
+        if (autonInitPhase) {
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          autonInitPhase = false;
+        }
+        DrivePerodic(true, .30, .30, 0, navx); // Move Diagnal 
+        timedIntake(intakeTime);
+        if (isGamePieceLimitSwitchTriggured == true) {
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 3:
+        if (autonInitPhase) {
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          IntakeArmSpeakerPosition();
+          autonInitPhase = false;
+        }
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(autonPhase) > 0.75) {
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 4:
+        if (autonInitPhase) {
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          autonInitPhase = false;
+        }
+        DrivePerodic(true, -.30, .30, .30, navx); // Move Diagnal and rotate
+        if (navx.getRotation2d().getDegrees() > 10) {
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 5:
+        if (autonInitPhase) {
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          autonInitPhase = false;
+        }
+        DrivePerodic(true, -.30, .30, 0, navx); // Move Diagnal
+        if (phaseStartTimes.get(3) - phaseStartTimes.get(2) > Timer.getFPGATimestamp() - phaseStartTimes.get(5)) { // if the time phase 2 took is greater than the time this phase has taken
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 6:
+        if (autonInitPhase) {
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          TimedShooter(shooterDuration);
+          DrivePerodic(true, 0, 0, 0, navx); // Stop Moving
+          autonInitPhase = false;
+        }
+        if (Timer.getFPGATimestamp() - phaseStartTimes.get(6) > shooterDuration){
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 7:
+        if (autonInitPhase) {
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          autonInitPhase = false;
+        }
+        DrivePerodic(true, .30, -.30, -.30, navx); // Move Diagnal and rotate
+        if (navx.getRotation2d().getDegrees() < 50) {
+          autonInitPhase = true; // Switch back to Init
+          autonPhase++; // Move to the next Phase
+        }
+        break; // Ensure execution stops here if this case is processed
+      case 8:
+        if (autonInitPhase) {
+          phaseStartTimes.add(Timer.getFPGATimestamp()); // Set Timer for phase
+          if (debug) { System.out.println("Entering Phase "+autonPhase+" of Routine");}
+          DrivePerodic(true, 0, 0, 0, navx); // Stop Moving
+        }
+        navx.reset();
+        break; // Ensure execution stops here if this case is processed
+    }
+  }
+
   private void sixthAutonomousTimedRoutine() {
     double autonSpeed = 0.15;
     if (debug) { SmartDashboard.putString("Autonomous Routine", "sixthAutonomousTimedRoutine");}
@@ -961,7 +1028,7 @@ public class Robot extends TimedRobot {
         }
         // Stuff to do periodically   
         runIntake(intakeSpeed);
-        if (isGamePieceLoaded) { // Condition to move into next phase
+        if (isGamePieceLimitSwitchTriggured) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1018,7 +1085,7 @@ public class Robot extends TimedRobot {
         }
         // Stuff to do periodically   
         runIntake(intakeSpeed);
-        if (isGamePieceLoaded) { // Condition to move into next phase
+        if (isGamePieceLimitSwitchTriggured) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1117,7 +1184,7 @@ public class Robot extends TimedRobot {
         }
         // Stuff to do periodically 
         runIntake(intakeSpeed);
-        if (isGamePieceLoaded) { // Condition to move into next phase
+        if (isGamePieceLimitSwitchTriggured) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1189,7 +1256,7 @@ public class Robot extends TimedRobot {
         }
         // Stuff to do periodically
         runIntake(intakeSpeed);
-        if (isGamePieceLoaded) { // Condition to move into next phase
+        if (isGamePieceLimitSwitchTriggured) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1280,7 +1347,7 @@ public class Robot extends TimedRobot {
         }
         // Stuff to do periodically   
         runIntake(intakeSpeed);
-        if (isGamePieceLoaded) { // Condition to move into next phase
+        if (isGamePieceLimitSwitchTriggured) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1376,7 +1443,7 @@ public class Robot extends TimedRobot {
         }
         // Stuff to do periodically   
         runIntake(intakeSpeed);
-        if (isGamePieceLoaded) { // Condition to move into next phase
+        if (isGamePieceLimitSwitchTriggured) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1419,7 +1486,7 @@ public class Robot extends TimedRobot {
           autonInitPhase = false; // Get out of Init Phase
         }
         // Stuff to do periodically   \
-        if (navx.getRotation2d().getDegrees() > -38) { // Condition to move into next phase
+        if (navx.getRotation2d().getDegrees() < -38) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1433,7 +1500,7 @@ public class Robot extends TimedRobot {
         }
         // Stuff to do periodically   
         runIntake(intakeSpeed);
-        if (isGamePieceLoaded) { // Condition to move into next phase
+        if (isGamePieceLimitSwitchTriggured) { // Condition to move into next phase
           autonInitPhase = true; // Switch back to Init
           autonPhase++; // Move to the next Phase
         }
@@ -1501,8 +1568,6 @@ public class Robot extends TimedRobot {
   }
   private void templateAutonomousRoutine() {
     if (debug) { SmartDashboard.putString("Autonomous Routine", "templateAutonomousTimedRoutine");}
-    boolean autonInitPhase = true;
-    ArrayList<Double> phaseStartTimes = new ArrayList<Double>(); // Create an Array List that we can add times without having to make a variable for each
     switch (autonPhase){
       case 0: // Phase Number
         if (autonInitPhase) { // Setup if statement for one time auton
@@ -1521,8 +1586,6 @@ public class Robot extends TimedRobot {
         System.out.println("Phase 1");
     }
   }
-
-
 
   /**
    * This function is run when the robot is first started up and should be used for any
@@ -1547,13 +1610,14 @@ public class Robot extends TimedRobot {
     controlModeChooser.addOption("Robot-Centric Control", false);
 
     // Add otpions to the Autonomus Chooser
-    autonRoutineChooser.addOption("12 Pt Routine",DefaultAuto);
-    autonRoutineChooser.addOption("7 Pt Routine",secondRoutine);
-    autonRoutineChooser.addOption("5 Pt Routine",thirdRoutine);
-    autonRoutineChooser.addOption("12 Pt Alternative Routine 2",fifthRoutine);
-    autonRoutineChooser.addOption("Big (17) Points Routine",sixthRoutine);
-    autonRoutineChooser.addOption("Huge (22) Points Routine",seventhRoutine);
-    autonRoutineChooser.addOption("Left (17) Points Routine",eighthRoutine);
+    autonRoutineChooser.addOption("1 - Front Speaker Position - 12 Point Routine",DefaultAuto);
+    autonRoutineChooser.addOption("2 - Any Valid Speaker Position - 7 Point Routine ",secondRoutine);
+    autonRoutineChooser.addOption("3 - Any Valid Speaker Position - 5 Point Routine",thirdRoutine);
+    autonRoutineChooser.addOption("4 - (untested) Left? Speaker Position - 12 Point alternative Routine",forthRoutine);
+    autonRoutineChooser.addOption("5 - (untested) Right? Speaker Position- 12 Point Alternate Routine",fifthRoutine);
+    autonRoutineChooser.addOption("6 - Front Speaker Position- 17 Point Left Note Routine ",sixthRoutine);
+    autonRoutineChooser.addOption("7 - Front Speaker Position- 22 Point Routine",seventhRoutine);
+    autonRoutineChooser.addOption("8 - Front Speaker Position - 17 Point Right Note Routine",eighthRoutine);
 
     // Put the choosers on the SmartDashboard
     SmartDashboard.putData("Control Mode Chooser", controlModeChooser);
@@ -1585,12 +1649,20 @@ public class Robot extends TimedRobot {
    * SmartDashboard integrated updating.
    */
   @Override
-  public void robotPeriodic() {
+  public void robotPeriodic() {    
+    // If statement to see if our Mode Choser outputs worked, and if not, have some fall back values (Mostly for Simulation Mode)
+    if (controlModeChooser.getSelected() != null) {      
+      // Set variables fieldCentricControl and twoControllerMode to options selected on interactive chooser by the operators
+      fieldCentricControl = controlModeChooser.getSelected();
+    } else {
+      // Handle the case where one or both values are null (simulation mode). Also log message because that is probably interesting to see
+      fieldCentricControl = true;      
+    }
     
     if (debug) {
       SmartDashboard.putNumber("Left Climber Encoder Position", leftClimberEncoder.getPosition());
       SmartDashboard.putNumber("Right Climber Encoder Position", rightClimberEncoder.getPosition());
-      SmartDashboard.putNumber("Intake Arm Value", intakeArmEncoder.getPosition());
+      SmartDashboard.putBoolean("Field Centric Control", fieldCentricControl);
     }
 
   }
@@ -1621,7 +1693,9 @@ public class Robot extends TimedRobot {
     // Update Periodic Methods
     InteractionPeriodic();
     LEDColorPeriodic();
-
+    
+    if (debug) { SmartDashboard.putNumber("Autonomous Phase", autonPhase);}
+    
     // Execute the corresponding autonomous routine
     switch (autonRoutineChooser.getSelected()) {
       case secondRoutine:
@@ -1653,18 +1727,8 @@ public class Robot extends TimedRobot {
   /** This function is called once when teleop is enabled. */
   @Override
   public void teleopInit() {
-
-  // If debug mode is on, write a line that lets us know what mode we're entering
-  if (debug) { System.out.println("Entering teleopInit Phase");}
-    // If statement to see if our Mode Choser outputs worked, and if not, have some fall back values (Mostly for Simulation Mode)
-    if (controlModeChooser.getSelected() != null) {      
-      // Set variables fieldCentricControl and twoControllerMode to options selected on interactive chooser by the operators
-      fieldCentricControl = controlModeChooser.getSelected();
-    } else {
-      // Handle the case where one or both values are null (simulation mode). Also log message because that is probably interesting to see
-      System.err.println("Error: Unable to retrieve control mode or controller mode from choosers. Using default values.");
-      fieldCentricControl = false;      
-    }
+    // If debug mode is on, write a line that lets us know what mode we're entering
+    if (debug) { System.out.println("Entering teleopInit Phase");}
   }
 
   /** This function is called periodically during operator control. */
