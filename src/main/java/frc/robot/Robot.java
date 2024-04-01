@@ -138,8 +138,8 @@ public class Robot extends TimedRobot {
   private double movementSpeed;
 
   // isGamePieceLoaded Variable
-  private boolean isGamePieceLoaded;  
-  private boolean isGamePieceLimitSwitchTriggured;
+  private boolean isGamePieceLoaded = false;  
+  private boolean isGamePieceLimitSwitchTriggured = false;
 
   private static final String DefaultAuto = "1 - Front Speaker Position - 12 Point Routine";
   private static final String secondRoutine = "2 - Any Valid Speaker Position - 7 Point Routine ";
@@ -252,7 +252,7 @@ public class Robot extends TimedRobot {
       SetLEDColor(4);
     } else if ((Timer.getFPGATimestamp() - navxZeroStartTime) < navxZeroIndicatorTime) {
       SetLEDColor(3);
-    } else if (isGamePieceLoaded == true) {
+    } else if (isGamePieceLoaded || isGamePieceLimitSwitchTriggured) {
       SetLEDColor(2);
     } else {
       SetLEDColor(1);
