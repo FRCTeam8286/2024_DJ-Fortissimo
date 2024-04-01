@@ -509,11 +509,13 @@ public class Robot extends TimedRobot {
   private void IntakeArmPeriodic(){
     SmartDashboard.putNumber("Intake Arm Value", intakeArmEncoder.getPosition());
     // Adjust Intake Arm Position based on readings from Enocder
+    /*
     if (intakeArmEncoder.getPosition() > 0.25) {
       IntakeArmPosition = 2;
     } else if (intakeArmEncoder.getPosition() < 0.10) {
       IntakeArmPosition = 0;
     }
+    */
 
     // This should run every cycle to ensure the intake arm is or isn't running as expected
     if ((Timer.getFPGATimestamp() - intakeArmStartTime) < intakeArmDuration) {        
@@ -1695,7 +1697,7 @@ public class Robot extends TimedRobot {
     LEDColorPeriodic();
     
     if (debug) { SmartDashboard.putNumber("Autonomous Phase", autonPhase);}
-    
+
     // Execute the corresponding autonomous routine
     switch (autonRoutineChooser.getSelected()) {
       case secondRoutine:
